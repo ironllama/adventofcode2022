@@ -1,4 +1,4 @@
-           >> SOURCE FORMAT FREE
+           >>source format free
 identification division.
 program-id. lib-readfile.
 
@@ -23,6 +23,7 @@ data division.
     01 ln-filename pic x(10).
     01 ln-all_lines.
      02 line_cnt pic s9(8) comp value 0.
+     *> May have to change the size of the line per puzzle input!
      02 line_row pic x(9) occurs 0 to unbounded
          depending on line_cnt indexed by line_idx.
 
@@ -53,7 +54,6 @@ procedure division using ln-filename ln-all_lines.
         add 1 to line_cnt
         *> display ">>" function trim(fileline)
         move function trim(fileline) to line_row(line_cnt)
-        *> move fileline to line_row(line_cnt)
     end-read
   end-perform.
 
