@@ -15,7 +15,7 @@ data division.
     01 fileline pic x(999).
 
   working-storage section.
-    01 filename pic x(25).
+    01 filename pic x(10).
     01 filestat pic xx.
     77 eof pic x.
 
@@ -48,6 +48,7 @@ procedure division using ln-filename ln-all_lines.
     goback
   end-if.
 
+  move 0 to line_cnt
   perform until eof = 'Y'
     read ifile at end move 'Y' to eof
       not at end
@@ -64,5 +65,5 @@ procedure division using ln-filename ln-all_lines.
 *>     display function trim(line_row(line_idx))
 *>   end-perform.
 
-  display "readfile: Reading complete. filename: " filename
+  display "readfile: Reading complete. filename: " function trim(filename) " line_cnt:" line_cnt
   goback.
