@@ -24,7 +24,7 @@ data division.
     01 ln-all_lines.
      02 line_cnt pic s9(8) comp value 0.
      *> May have to change the size of the line per puzzle input!
-     02 line_row pic x(9) occurs 0 to unbounded
+     02 line_row pic x(99) occurs 0 to unbounded
          depending on line_cnt indexed by line_idx.
 
 procedure division using ln-filename ln-all_lines.
