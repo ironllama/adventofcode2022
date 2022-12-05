@@ -22,7 +22,7 @@ data division.
     77 all_chars pic x(52).
     77 all_chars_idx pic 9(2) comp.
     77 final_points pic 9(4) comp.
-  
+
 procedure division.
   call 'lib-readfile' using function module-id rf_all_lines
   *> move "vJrwpWtwJgWrhcsFMMfFFhFp" to rf_line_row(1)
@@ -34,7 +34,7 @@ procedure division.
   *> move 6 to rf_line_cnt
 
   move "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" to all_chars
-  display "[" all_chars "]"
+  *> display "[" all_chars "]"
   move 0 to final_points
 
   perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
@@ -44,14 +44,14 @@ procedure division.
     compute num_chars = num_chars / 2
     move rf_line_row(rf_line_idx)(1:num_chars) to left_string
     move rf_line_row(rf_line_idx)(num_chars + 1:) to right_string
-    display left_string " " right_string
+    *> display left_string " " right_string
 
     move 0 to match_found
     perform varying left_idx from 1 by 1 until left_idx > num_chars or match_found = 1
       move left_string(left_idx:1) to left_char
       perform varying right_idx from 1 by 1 until right_idx > num_chars or match_found = 1
         if left_char = right_string(right_idx:1)
-          *> display "MATCH: " left_char no advancing 
+          *> display "MATCH: " left_char no advancing
           perform varying all_chars_idx from 1 by 1 until all_chars_idx > 52
             if all_chars(all_chars_idx:1) = left_char
               *> display "POINTS: " all_chars_idx
@@ -61,7 +61,7 @@ procedure division.
           move 1 to match_found
         end-if
       end-perform
-    end-perform  
+    end-perform
   end-perform
 
   display "FINAL: " final_points

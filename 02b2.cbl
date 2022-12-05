@@ -7,7 +7,7 @@ data division.
     *> For lib-readfile
     01 rf_all_lines.
       02 rf_line_cnt pic s9(8) comp value 0.
-      02 rf_line_row pic x(9) occurs 0 to 9999 times
+      02 rf_line_row pic x(99) occurs 0 to 9999 times
           depending on rf_line_cnt indexed by rf_line_idx.
 
     01 game_round.
