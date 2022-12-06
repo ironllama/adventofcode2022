@@ -31,8 +31,8 @@ procedure division.
 *>   move "zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw" to rf_line_row(1)
 *>   move 1 to rf_line_cnt
 
-  move spaces to window_chars;
-  move 4 to window_size;
+  move spaces to window_chars
+  move 4 to window_size
 
   *> display "LINE: " function trim(rf_line_row(1)) " LENGTH: " length of function trim(rf_line_row(1))
   perform varying pos_idx from 1 by 1 until
