@@ -12,7 +12,10 @@ environment division.
 data division.
   file section.
     fd ifile.
-    01 fileline pic x(999).
+    *>   record is varying in size from 9 to 9999
+    *>   depending on ln-max_line_len.
+    *> May have to change the size of the line per puzzle input!
+    01 fileline pic x(9999).
 
   working-storage section.
     01 filename pic x(10).
@@ -21,10 +24,11 @@ data division.
 
   linkage section.
     01 ln-filename pic x(10).
+    *> 01 ln-max_line_len pic s9(8) comp.
     01 ln-all_lines.
      02 line_cnt pic s9(8) comp value 0.
      *> May have to change the size of the line per puzzle input!
-     02 line_row pic x(99) occurs 0 to unbounded
+     02 line_row pic x(9999) occurs 0 to unbounded
          depending on line_cnt indexed by line_idx.
 
 procedure division using ln-filename ln-all_lines.
