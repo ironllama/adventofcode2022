@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 07a.
+program-id. 07b.
 
 data division.
   working-storage section.
