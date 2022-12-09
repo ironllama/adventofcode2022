@@ -10,7 +10,7 @@ data division.
       02 rf_line_row pic x(99) occurs 0 to 9999 times
           depending on rf_line_cnt indexed by rf_line_idx.
 
-  77 total_found pic s9(8) comp.
+    77 total_found pic s9(8) comp.
 
 procedure division.
   call 'lib-readfile' using function module-id rf_all_lines

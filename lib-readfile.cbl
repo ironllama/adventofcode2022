@@ -58,8 +58,8 @@ procedure division using ln-filename ln-all_lines.
       not at end
         add 1 to line_cnt
         *> display ">>" function trim(fileline)
-        *> move function trim(fileline) to line_row(line_cnt)
-        move fileline to line_row(line_cnt)
+        move function trim(fileline) to line_row(line_cnt)
+        *> move fileline to line_row(line_cnt)
     end-read
   end-perform.
 
