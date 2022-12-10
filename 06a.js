@@ -1,0 +1,1 @@
+console.log(require('fs').readFileSync('06.dat', 'utf-8').indexOf(require('fs').readFileSync('06.dat', 'utf-8').match(/(\S)((?!\1).)((?!\1|\2).)((?!\1|\2|\3).)/g)[0]) + 4);

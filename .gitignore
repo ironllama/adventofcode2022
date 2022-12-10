@@ -2,7 +2,8 @@
 !/**/
 !*.cbl
 !*.cob
-!*.dat
+!*.da*
 !.gitignore
 !*.bat
 !*.pdf
+!*.js
