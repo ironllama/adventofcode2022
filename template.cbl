@@ -7,13 +7,13 @@ data division.
     *> For lib-readfile
     01 rf_all_lines.
       02 rf_line_cnt pic s9(8) comp value 0.
-      02 rf_line_row pic x(99) occurs 0 to 9999 times
+      02 rf_line_row pic x(9999) occurs 0 to 9999 times
           depending on rf_line_cnt indexed by rf_line_idx.
 
     77 total_found pic s9(8) comp.
 
 procedure division.
-  call 'lib-readfile' using function module-id rf_all_lines
+  call 'lib-readdata' using function module-id ".da1" rf_all_lines
   *> move "1-4,6-8" to rf_line_row(1)
   *> move "1-3,4-5" to rf_line_row(2)
   *> move "4-7,7-9" to rf_line_row(3)
