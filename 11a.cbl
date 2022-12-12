@@ -42,15 +42,18 @@ data division.
     77 total_found pic s9(8) comp.
 
 procedure division.
-  *> call 'lib-readdata' using function module-id ".dat" rf_all_lines
-  *> move 8 to num_monkeys
-  call 'lib-readdata' using function module-id ".da1" rf_all_lines
-  move 4 to num_monkeys
+  call 'lib-readdata' using function module-id ".dat" rf_all_lines
+  move 8 to num_monkeys
+  *> call 'lib-readdata' using function module-id ".da1" rf_all_lines
+  *> move 4 to num_monkeys
 
+  *> Parse the input. Line by line, testing first character to determine what to do.
+  *> In hindsight, this might have been easier to read if it were done in 6 line blocks. Meh.
   move 0 to total_found
   perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
     *> display "LINE: " function trim(rf_line_row(rf_line_idx))
     if length of function trim(rf_line_row(rf_line_idx)) > 1
+      *> "Monkey 0:"
       if rf_line_row(rf_line_idx)(1:1) = "M"
         initialize read_filler1
         unstring rf_line_row(rf_line_idx) delimited by space
@@ -59,6 +62,8 @@ procedure division.
         add 1 to read_monkey_num
         *> display "MONKEY " read_monkey_num
       else
+        *> "Starting items: 79, 98"
+        *> First separate the list of numbers from the text.
         if rf_line_row(rf_line_idx)(1:1) = "S"
           initialize read_filler1
           initialize read_filler2
@@ -66,6 +71,7 @@ procedure division.
             into read_filler1 read_filler2
           end-unstring
 
+          *> Then, separate each item.
           move 0 to read_items_done
           move 1 to read_items_ptr
           perform until read_items_done = 1
@@ -120,38 +126,50 @@ procedure division.
     end-if
   end-perform
 
-  perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
-    display "MONKEY " monkey_idx ": oper: " monkey_operator(monkey_idx) " " monkey_operand(monkey_idx) " div by: " monkey_test(monkey_idx) " t: " monkey_test_t(monkey_idx) " f: " monkey_test_f(monkey_idx) " items: " no advancing
-     set monkey_items_idx to 1
-     perform varying monkey_items_idx from 1 by 1 until monkey_items_idx > monkey_items_num(monkey_idx)
-      display monkey_items(monkey_idx monkey_items_idx) ", " no advancing
-     end-perform
-     display space
-  end-perform
+  *> Confirm that the parsing worked properly.
+  *> perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
+  *>   *> display "MONKEY " monkey_idx ": oper: " monkey_operator(monkey_idx) " " monkey_operand(monkey_idx) " div by: " monkey_test(monkey_idx) " t: " monkey_test_t(monkey_idx) " f: " monkey_test_f(monkey_idx) " items: " no advancing
+  *>    set monkey_items_idx to 1
+  *>    perform varying monkey_items_idx from 1 by 1 until monkey_items_idx > monkey_items_num(monkey_idx)
+  *>     display monkey_items(monkey_idx monkey_items_idx) ", " no advancing
+  *>    end-perform
+  *>    display space
+  *> end-perform
 
   perform varying round_idx from 1 by 1 until round_idx > 20
     perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
        move 0 to curr_worry
        set monkey_items_idx to 1
+       *> Go through the items per monkey. Note that there isn't really a convienent way I've found to "shift" or "unshift", other than
+       *> creating a custom data structure with pointers, which I'm kinda at the cusp of doing, but would rather just brute force
+       *> it into an ever growing array that just stores and moves it's starting point as each item is shifted from the array.
+       *> This means the array can be huge, but hey, memory is cheap right? Right? RIGHT?!
        perform varying monkey_items_idx from monkey_items_head(monkey_idx) by 1 until monkey_items_idx > monkey_items_num(monkey_idx)
          add 1 to monkey_num_inspects(monkey_idx)
+
+         *> Convenience variable for readability. So. Many. Parens.
+         move monkey_items(monkey_idx monkey_items_idx) to curr_worry
+
+         *> Apply Operation.
          if monkey_operand(monkey_idx) = "old"
-           move monkey_items(monkey_idx monkey_items_idx) to curr_operand
+           move curr_worry to curr_operand
          else
            move monkey_operand(monkey_idx) to curr_operand
          end-if
         *> display "CURR_OPERAND: " curr_operand
 
          if monkey_operator(monkey_idx) = "+"
-           compute curr_worry = monkey_items(monkey_idx monkey_items_idx) + curr_operand
+           compute curr_worry = curr_worry + curr_operand
          end-if
          if monkey_operator(monkey_idx) = "*"
-           compute curr_worry = monkey_items(monkey_idx monkey_items_idx) * curr_operand
+           compute curr_worry = curr_worry * curr_operand
          end-if
-       
-         compute curr_worry = curr_worry / 3
-        *> display "CURR_WORRY: " curr_worry
 
+         *> Reduce the worry. Don't worry, be happy.
+         compute curr_worry = curr_worry / 3
+         *> display "CURR_WORRY: " curr_worry
+
+         *> Perform the test to see which monkey gets the item next.
          if function mod(curr_worry monkey_test(monkey_idx)) = 0
            add 1 to monkey_items_num(monkey_test_t(monkey_idx))
            move curr_worry to monkey_items(monkey_test_t(monkey_idx) monkey_items_num(monkey_test_t(monkey_idx)))
@@ -159,22 +177,25 @@ procedure division.
            add 1 to monkey_items_num(monkey_test_f(monkey_idx))
            move curr_worry to monkey_items(monkey_test_f(monkey_idx) monkey_items_num(monkey_test_f(monkey_idx)))
          end-if
+
+         *> Hacky "shift" of the array by moving the starting point for the next time the loop happens. See note at start of loop.
          add 1 to monkey_items_head(monkey_idx)
        end-perform
        *> display space
     end-perform
 
-    display "ROUND: " round_idx
-    perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
-       display "MONKEY " monkey_idx ": " no advancing
-       set monkey_items_idx to 1
-       perform varying monkey_items_idx from monkey_items_head(monkey_idx) by 1 until monkey_items_idx > monkey_items_num(monkey_idx)
-        display monkey_items(monkey_idx monkey_items_idx) ", " no advancing
-       end-perform
-       display space
-    end-perform
+    *> display "ROUND: " round_idx
+    *> perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
+    *>    display "MONKEY " monkey_idx ": " no advancing
+    *>    set monkey_items_idx to 1
+    *>    perform varying monkey_items_idx from monkey_items_head(monkey_idx) by 1 until monkey_items_idx > monkey_items_num(monkey_idx)
+    *>     display monkey_items(monkey_idx monkey_items_idx) ", " no advancing
+    *>    end-perform
+    *>    display space
+    *> end-perform
   end-perform
 
+  *> Get highest 2 inspection amounts from the barrel full of monkeys.
   display space
   perform varying monkey_idx from 1 by 1 until monkey_idx > num_monkeys
     display "MONKEY " monkey_idx ": " monkey_num_inspects(monkey_idx)
