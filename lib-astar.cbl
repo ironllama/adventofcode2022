@@ -137,8 +137,8 @@ procedure division using ln-startPt ln-goalPt ln-nodes ln-heuristic ln-curr_neig
 
 check_neighbor.
   *> display "CHECKING: " ln-nodes_row(ln-curr_neighbor) " - " ln-nodes_row(current)
+  *> This if-then-end-if only exists for AoC2022-Day12.
   if ln-nodes_row(ln-curr_neighbor) - ln-nodes_row(current) <= 1
-  *> display "IN LOOP!"
    compute temp_gScore = gScore_val(current) + ln-nodes_row(ln-curr_neighbor)  *> See above.
    *> display "GSCORE: [" ln-curr_neighbor "]: " temp_gScore " < " gScore_val(ln-curr_neighbor) " " gScore_val(current) " " ln-nodes_row(ln-curr_neighbor)
    if temp_gScore < gScore_val(ln-curr_neighbor)
