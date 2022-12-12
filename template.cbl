@@ -13,6 +13,7 @@ data division.
     77 total_found pic s9(8) comp.
 
 procedure division.
+  *> call 'lib-readdata' using function module-id ".dat" rf_all_lines
   call 'lib-readdata' using function module-id ".da1" rf_all_lines
   *> move "1-4,6-8" to rf_line_row(1)
   *> move "1-3,4-5" to rf_line_row(2)
