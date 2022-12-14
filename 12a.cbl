@@ -12,13 +12,13 @@ data division.
 
     77 curr_letter pic x.
     77 row_idx pic s9(4) comp.
-    77 heuristic_return pic s9(8) comp.
+    *> 77 heuristic_return pic s9(8) comp.
 
     77 check_row_num pic s9(4) comp.
     77 check_col_num pic s9(4) comp.
     77 check_return pic x.
 
-    *> For lib-astar
+    *> For lib-astar/dijkstra
     01 startPt pic s9(8) comp.
     01 goalPt pic s9(8) comp.
     01 nodes.
@@ -26,9 +26,9 @@ data division.
       02 nodes_per_row pic s9(4) comp.
       02 nodes_row pic s9(4) comp value 0 occurs 0 to 99999 times
           depending on nodes_len indexed by nodes_idx.
-    01 heuristic procedure-pointer.
-    01 curr_neighbor pic s9(8) comp.
-    01 current pic s9(8) comp.
+    *> 01 heuristic procedure-pointer.
+    *> 01 curr_neighbor pic s9(8) comp.
+    *> 01 current pic s9(8) comp.
     01 path.
       02 path_len pic s9(8) comp value 0.
       02 path_val pic s9(8) comp value 0 occurs 0 to 99999 times
@@ -36,7 +36,7 @@ data division.
 
 procedure division.
   call 'lib-readdata' using function module-id ".dat" rf_all_lines
-  *> call 'lib-readdata' using function module-id ".da1" rf_all_lines
+*>   call 'lib-readdata' using function module-id ".da1" rf_all_lines
 
   move length of function trim(rf_line_row(1)) to nodes_per_row
   *> display "LENGTH: " nodes_per_row
@@ -77,18 +77,48 @@ procedure division.
   *> end-perform
   *> display "]"
 
-  set heuristic to entry "heuristic"
-  call 'lib-astar' using startPt goalPt nodes heuristic curr_neighbor current path
+*>   set heuristic to entry "heuristic"
+*>   call 'lib-astar' using startPt goalPt nodes heuristic curr_neighbor current path
+  call 'lib-dijkstra' using startPt goalPt nodes path
 
+  *> Show the shortest path values!
+  display "path: [" no advancing
+  perform varying path_idx from 1 by 1 until path_idx > path_len
+    display path_val(path_idx) no advancing
+    if path_idx < path_len
+      display ", " no advancing
+    end-if
+  end-perform
+  display "]"
   *> Show the shortest path!
-  *> display "path: [" no advancing
-  *> perform varying path_idx from 1 by 1 until path_idx > path_len
-  *>   display path_val(path_idx) no advancing
-  *>   if path_idx < path_len
-  *>     display ", " no advancing
-  *>   end-if
-  *> end-perform
-  *> display "]"
+  perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
+    perform varying row_idx from 1 by 1 until row_idx > nodes_per_row
+      set path_idx to 1
+      search path_val varying path_idx
+        at end display "." no advancing
+        when path_val(path_idx) = ((rf_line_idx - 1) * nodes_per_row) + row_idx
+        *>   display "#" no advancing
+          if path_val(path_idx) = path_val(path_idx - 1) - 1
+            display ">" no advancing
+          else
+            if path_val(path_idx) = path_val(path_idx - 1) + 1
+             display "<" no advancing
+           else
+             if path_val(path_idx) < (rf_line_cnt - 1) * nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) - nodes_per_row
+               display "v" no advancing
+             else
+               if path_val(path_idx) > nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) + nodes_per_row
+                 display "^" no advancing
+               else
+                 display "?" no advancing
+               end-if
+             end-if
+            end-if
+          end-if
+      end-search
+    end-perform
+    display space
+  end-perform
 
   display "SIZE: " path_len
 
@@ -96,7 +126,7 @@ procedure division.
 
 
 *> Compute the heuristic values for a-star.
-entry "heuristic"
-  compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
-  *> display "HEURISTIC!" curr_neighbor nodes_row(curr_neighbor) heuristic_return
-  goback returning heuristic_return.
+*> entry "heuristic"
+  *> compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
+  *> *> display "HEURISTIC!" curr_neighbor nodes_row(curr_neighbor) heuristic_return
+  *> goback returning heuristic_return.

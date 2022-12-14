@@ -18,7 +18,7 @@ data division.
     77 alpha_idx pic s9(2) comp.
 
     01 row_idx pic s9(4) comp.
-    01 heuristic_return pic s9(8) comp.
+    *> 01 heuristic_return pic s9(8) comp.
 
     *> 01 check_row_num pic s9(4) comp.
     *> 01 check_col_num pic s9(4) comp.
@@ -37,7 +37,7 @@ data division.
 
     01 total pic s9(8) comp value 0.
 
-    *> For lib-astar
+    *> For lib-astar/dijkstra
     01 startPt pic s9(8) comp.
     01 goalPt pic s9(8) comp.
     01 nodes.
@@ -45,9 +45,9 @@ data division.
       02 nodes_per_row pic s9(4) comp.
       02 nodes_row pic s9(4) comp value 0 occurs 0 to 99999 times
           depending on nodes_len indexed by nodes_idx.
-    01 heuristic procedure-pointer.
-    01 curr_neighbor pic s9(8) comp.
-    01 current pic s9(8) comp.
+    *> 01 heuristic procedure-pointer.
+    *> 01 curr_neighbor pic s9(8) comp.
+    *> 01 current pic s9(8) comp.
     *> 01 check_original procedure-pointer.
     01 path.
       02 path_len pic s9(8) comp value 0.
@@ -117,11 +117,12 @@ procedure division.
   set as_table_idx to 1
   perform varying as_table_idx from 1 by 1 until as_table_idx > as_table_len
     *> display "NEW END A: " as_table(as_table_idx)
-    initialize curr_neighbor
-    initialize current
+    *> initialize curr_neighbor
+    *> initialize current
     initialize path
-    set heuristic to entry "heuristic"
-    call 'lib-astar' using goalPt as_table(as_table_idx) nodes heuristic curr_neighbor current path
+    *> set heuristic to entry "heuristic"
+    *> call 'lib-astar' using goalPt as_table(as_table_idx) nodes heuristic curr_neighbor current path
+    call 'lib-dijkstra' using goalPt as_table(as_table_idx) nodes path
 
     *> display "FINISHED: " path_len
     *> See if this path is the shortest path.
@@ -148,12 +149,12 @@ procedure division.
 
 
 *> Compute the heuristic values for a-star.
-entry "heuristic"
-*>   move nodes_row(curr_neighbor) to heuristic_return
-  compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
-*>   compute heuristic_return = nodes_row(current) - nodes_row(curr_neighbor)
-  *> display "HEURISTIC!" curr_neighbor nodes_row(curr_neighbor) heuristic_return
-  goback returning heuristic_return.
+*> entry "heuristic"
+*> *>   move nodes_row(curr_neighbor) to heuristic_return
+*>   compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
+*> *>   compute heuristic_return = nodes_row(current) - nodes_row(curr_neighbor)
+*>   *> display "HEURISTIC!" curr_neighbor nodes_row(curr_neighbor) heuristic_return
+*>   goback returning heuristic_return.
 
 *> Originally, I had a-star callback here to check if a node was 'a' to see if it was time
 *> to stop on the way to an arbitrary goal (node 1). But reverted to just assigning a new 'a' as a goal, above.
