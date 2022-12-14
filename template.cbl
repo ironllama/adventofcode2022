@@ -15,13 +15,6 @@ data division.
 procedure division.
   *> call 'lib-readdata' using function module-id ".dat" rf_all_lines
   call 'lib-readdata' using function module-id ".da1" rf_all_lines
-  *> move "1-4,6-8" to rf_line_row(1)
-  *> move "1-3,4-5" to rf_line_row(2)
-  *> move "4-7,7-9" to rf_line_row(3)
-  *> move "1-8,3-7" to rf_line_row(4)
-  *> move "5-6,4-6" to rf_line_row(5)
-  *> move "1-6,4-8" to rf_line_row(6)
-  *> move 6 to rf_line_cnt
 
   move 0 to total_found
   perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
