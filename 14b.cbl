@@ -43,8 +43,12 @@ data division.
 
     01 sand_x pic 9(4) comp.
     01 sand_y pic 9(4) comp.
-    01 sand_last_x pic 9(4) comp.
-    01 sand_last_y pic 9(4) comp.
+    01 sand_last_arr.
+      02 sand_last_cnt pic 9(4) comp.
+      02 sand_last occurs 0 to 999 times
+          depending on sand_last_cnt indexed by sand_last_idx.
+        03 sand_last_x pic 9(4) comp.
+        03 sand_last_y pic 9(4) comp.
 
     01 sand_dl pic 9(4) comp.
     01 sand_dr pic 9(4) comp.
@@ -162,36 +166,31 @@ procedure division.
   end-perform
 
   display "LOWEST: " lowest_x " " lowest_y " HIGHEST: " highest_x " " highest_y
-  display "ROCKS: [" no advancing
-  perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt
-    display "(" rock_x(rock_idx) "," rock_y(rock_idx) "), " no advancing
-  end-perform
-  display "]"
-
-  perform print_progress
-*>   perform varying temp_idx_y from lowest_y by 1 until temp_idx_y > highest_y
-*>     perform varying temp_idx_x from lowest_x by 1 until temp_idx_x > highest_x
-*>       move 0 to rock_found
-*>       perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt or rock_found = 1
-*>         if rock_x(rock_idx) = temp_idx_x and rock_y(rock_idx) = temp_idx_y
-*>           move 1 to rock_found
-*>         end-if
-*>       end-perform
-*>       if rock_found = 1 display "#" no advancing else display "." no advancing end-if
-*>     end-perform
-*>     display space
+*>   display "ROCKS: [" no advancing
+*>   perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt
+*>     display "(" rock_x(rock_idx) "," rock_y(rock_idx) "), " no advancing
 *>   end-perform
+*>   display "]"
 
+*>   perform print_progress
 
   *> Drop the sand
   move 0 to total_found
   move 0 to origin_blocked
+  add 1 to sand_last_cnt
+  move 500 to sand_last_x(sand_last_cnt)
+  move 0 to sand_last_y(sand_last_cnt)
+
   perform until origin_blocked = 1
     *> Generate a new unit of sand
-    move 500 to sand_x
-    move 0 to sand_y
+    *> move 500 to sand_x
+    *> move 0 to sand_y
+
+    move sand_last_x(sand_last_cnt) to sand_x
+    move sand_last_y(sand_last_cnt) to sand_y
+
     move 0 to sand_at_rest
-    *> display "NEW SAND: " total_found
+    display "NEW SAND: " total_found " (" sand_x ", " sand_y ")"
 
     perform until sand_at_rest = 1 or origin_blocked = 1
       *> Does this rock already exist?
@@ -204,6 +203,7 @@ procedure division.
         move 1 to rock_found_dr
         move 1 to rock_found_dl
       else
+        *> Test future positions.
         perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt or (rock_found_dn <> 0 and rock_found_dl <> 0 and rock_found_dr <> 0)
           *> display "ROCK LOOP: " rock_idx " of " rock_cnt " " rock_x(rock_idx) " " rock_y(rock_idx) " SAND: " sand_x " " sand_y
           *> Straight down
@@ -223,9 +223,9 @@ procedure division.
           end-if
         end-perform
       end-if
+      *> display "TESTING: " rock_found_dn " " rock_found_dl " " rock_found_dr
 
-    *>   display "TESTING: " rock_found_dn " " rock_found_dl " " rock_found_dr
-
+      *> Determine what to do.
       if rock_found_dn = 0
         *> display "FALLING"
         add 1 to sand_y
@@ -246,6 +246,8 @@ procedure division.
             move 1 to sand_at_rest
             add 1 to total_found
 
+            subtract 1 from sand_last_cnt
+
             if sand_x = 500 and sand_y = 0
               move 1 to origin_blocked
             end-if
@@ -259,9 +261,11 @@ procedure division.
         end-if
       end-if
 
-      *> if sand_y > highest_y
-      *>   move 1 to origin_blocked
-      *> end-if
+      if sand_at_rest = 0
+        add 1 to sand_last_cnt
+        move sand_x to sand_last_x(sand_last_cnt)
+        move sand_y to sand_last_y(sand_last_cnt)
+      end-if
     end-perform
   end-perform
 
