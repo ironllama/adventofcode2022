@@ -32,11 +32,12 @@ data division.
          depending on rock_cnt indexed by rock_idx.
         03 rock_x pic 9(4).
         03 rock_y pic 9(4).
+    01 rock_cnt_init pic 9(4).
+    01 rock_found pic 9.
     01 lowest_x pic 9(4).
     01 lowest_y pic 9(4).
     01 highest_x pic 9(4).
     01 highest_y pic 9(4).
-    01 rock_found pic 9.
 
     01 temp_idx_y pic 9(4).
     01 temp_idx_x pic 9(4).
@@ -58,13 +59,10 @@ data division.
     01 rock_found_dl pic 9.
     01 rock_found_dr pic 9.
 
-    77 total_found pic s9(8) comp.
-
 procedure division.
   call 'lib-readdata' using function module-id ".dat" rf_all_lines
 *>   call 'lib-readdata' using function module-id ".da1" rf_all_lines
 
-  move 0 to total_found
   move high-value to lowest_x
   move high-value to lowest_y
   move low-value to highest_x
@@ -103,11 +101,11 @@ procedure division.
       end-unstring
     end-perform
 
-    display "SPLIT: [" no advancing
-    perform varying split_idx from 1 by 1 until split_idx > split_cnt
-      display "(" split_x(split_idx) "," split_y(split_idx) "), " no advancing
-    end-perform
-    display "]"
+    *> display "SPLIT: [" no advancing
+    *> perform varying split_idx from 1 by 1 until split_idx > split_cnt
+      *> display "(" split_x(split_idx) "," split_y(split_idx) "), " no advancing
+    *> end-perform
+    *> display "]"
 
     *> Move the ranges into the rock table.
     perform varying split_idx from 1 by 1 until split_idx > (split_cnt - 1)
@@ -126,9 +124,18 @@ procedure division.
          if split_y(split_idx) > highest_y move split_y(split_idx) to highest_y end-if
 
          perform varying split_inner_idx from split_inner_beg by 1 until split_inner_idx > split_inner_end
-           add 1 to rock_cnt
-           move split_inner_idx to rock_x(rock_cnt)
-           move split_y(split_idx) to rock_y(rock_cnt)
+         *> Check if it's already in the rocks table, before adding it.
+           move 0 to rock_found
+           perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt or rock_found = 1
+             if rock_x(rock_idx) = split_x(split_idx) and rock_y(rock_idx) = split_inner_idx
+               move 1 to rock_found
+             end-if
+           end-perform
+           if rock_found = 0
+             add 1 to rock_cnt
+             move split_inner_idx to rock_x(rock_cnt)
+             move split_y(split_idx) to rock_y(rock_cnt)
+           end-if
          end-perform
        end-if
 
@@ -156,16 +163,17 @@ procedure division.
            end-perform
            if rock_found = 0
              add 1 to rock_cnt
-             move split_inner_idx to rock_y(rock_cnt)
              move split_x(split_idx) to rock_x(rock_cnt)
+             move split_inner_idx to rock_y(rock_cnt)
            end-if
          end-perform
        end-if
 
     end-perform
   end-perform
+  move rock_cnt to rock_cnt_init
 
-  display "LOWEST: " lowest_x " " lowest_y " HIGHEST: " highest_x " " highest_y
+  display "ROCK COUNT: " rock_cnt " LOWEST: " lowest_x " " lowest_y " HIGHEST: " highest_x " " highest_y
 *>   display "ROCKS: [" no advancing
 *>   perform varying rock_idx from 1 by 1 until rock_idx > rock_cnt
 *>     display "(" rock_x(rock_idx) "," rock_y(rock_idx) "), " no advancing
@@ -175,7 +183,6 @@ procedure division.
 *>   perform print_progress
 
   *> Drop the sand
-  move 0 to total_found
   move 0 to origin_blocked
   add 1 to sand_last_cnt
   move 500 to sand_last_x(sand_last_cnt)
@@ -190,7 +197,7 @@ procedure division.
     move sand_last_y(sand_last_cnt) to sand_y
 
     move 0 to sand_at_rest
-    display "NEW SAND: " total_found " (" sand_x ", " sand_y ")"
+    *> display "NEW SAND: " rock_cnt " (" sand_x ", " sand_y ")"
 
     perform until sand_at_rest = 1 or origin_blocked = 1
       *> Does this rock already exist?
@@ -198,6 +205,7 @@ procedure division.
       move 0 to rock_found_dr
       move 0 to rock_found_dl
 
+      *> Check if not already on the 'floor'
       if sand_y = highest_y + 1
         move 1 to rock_found_dn
         move 1 to rock_found_dr
@@ -244,19 +252,12 @@ procedure division.
             move sand_x to rock_x(rock_cnt)
             *> display "ADDED: " sand_x " " sand_y
             move 1 to sand_at_rest
-            add 1 to total_found
-
-            subtract 1 from sand_last_cnt
 
             if sand_x = 500 and sand_y = 0
               move 1 to origin_blocked
             end-if
 
-            *> compute lowest_x = sand_x - 20
-            *> compute highest_x = sand_x + 20
-            *> compute lowest_y = sand_y - 20
-            *> compute highest_x = sand_y + 20
-            *> perform print_progress
+            subtract 1 from sand_last_cnt
           end-if
         end-if
       end-if
@@ -269,7 +270,8 @@ procedure division.
     end-perform
   end-perform
 
-  display "FINAL: " total_found
+  compute rock_cnt = rock_cnt - rock_cnt_init
+  display "FINAL: " rock_cnt
 
   goback.
 
