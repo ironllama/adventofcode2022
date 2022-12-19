@@ -21,6 +21,11 @@ data division.
           04 valve_neighbor_name pic x(2).
           04 valve_neighbor_ptr pic 9(2).
         *>   04 valve_neighbor_ptr usage is pointer.
+    
+    01 active_valves.
+      02 active_valve_num pic 9(2).
+      02 active_valve pic s9(8) occurs 62 times indexed by active_valve_idx.
+    77 active_valve_idx2 usage is index.
 
     01 valves_on_tbl.
       02 valves_on pic 9(2) occurs 62 times indexed by valves_on_idx.
@@ -72,9 +77,14 @@ procedure division.
   move rf_cnt to valves_num
   perform varying rf_idx from 1 by 1 until rf_idx > rf_cnt
     *> display "LINE: " function trim(rf_row(rf_idx))
+
+    *> Get name of valve.
     move rf_row(rf_idx)(7:2) to valve_name(rf_idx)
+
+    *> Note index if this is the starting valve.
     if valve_name(rf_idx) = "AA" move rf_idx to starting_valve end-if
 
+    *> Get flowrate of valve.
     move rf_row(rf_idx)(24:2) to temp_flowrate
     if temp_flowrate(2:) = ";"
       move temp_flowrate(1:1) to valve_flowrate(rf_idx)
@@ -82,7 +92,13 @@ procedure division.
       move temp_flowrate to valve_flowrate(rf_idx)
     end-if
 
-    move spaces to temp_neighbors
+    *> Keep track of all valves with positive flowrates
+    if valve_flowrate(rf_idx) > 0
+      add 1 to active_valve_num
+      move rf_idx to active_valve(active_valve_num)
+    end-if
+
+    *> Get all the neighbors of the valve.
     unstring function trim(rf_row(rf_idx)) delimited by "ves " or "valve "
       into temp_misc temp_neighbors
     end-unstring
@@ -133,6 +149,13 @@ procedure division.
       end-if
     end-perform
     display spaces
+  end-perform
+
+  *> Generate all the possibilties amongst the positive flowrate valves
+  perform varying active_valve_idx from 1 by 1 until active_valve_idx > active_valve_num
+    perform varying active_valve_idx2 from 1 by 1 until function mod(active_valve_idx2 active_valve_num) = active_valve_idx
+      // Permutations!
+    end-perform
   end-perform
 
   *> Find most beneficial path to next valve to open, and go there. Repeat.
