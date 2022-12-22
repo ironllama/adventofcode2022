@@ -15,17 +15,7 @@ data division.
     01 rf_chars_in_row pic s9(4) comp.
     01 rf_chars_in_col pic s9(4) comp.
 
-    01 map_stuff.
-    *>   02 map_cnt pic s9(8) comp.
-      02 map_row occurs 200 times indexed by map_row_idx.
-        *> 03 map_row_start usage is index.
-        *> 03 map_row_end usage is index.
-        *> 03 map_row_size pic s9(4) comp.
-        03 map_col occurs 150 times indexed by map_col_idx.
-          04 map pic x.
-
     01 dir_str pic x(5650).
-    *> 01 dir_str_cnt pic 9(4) comp.
     01 dir_str_idx usage is index.
     01 dir_buff pic x(4).
     01 dir_num pic 9(4) comp.
@@ -39,12 +29,6 @@ data division.
     01 curr_y pic s9(3) comp value 0.
     01 curr_facing pic s9.
 
-    01 path_stuff.
-      02 path occurs 9999 times indexed by path_idx.
-        03 path_dir pic x.
-        03 path_x pic s9(4) comp.
-        03 path_y pic s9(4) comp.
-
     77 total_found pic s9(8) comp.
 
 procedure division.
@@ -54,7 +38,7 @@ procedure division.
   *> This happens to work with both the example and my data set, but may not work with all data!
   move length of function trim(rf_row(10) trailing) to rf_chars_in_row
 
-  move 0 to total_found
+  *> Scan the input for the starting position, and the line separating map from directions.
   perform varying rf_idx from 1 by 1 until rf_idx > rf_cnt or rf_row(rf_idx) = spaces
     *> display "LINE: " function trim(rf_row(rf_idx))
     perform varying rf_char_idx from 1 by 1 until rf_char_idx > rf_chars_in_row
@@ -100,6 +84,11 @@ procedure division.
     *> if curr_facing = 0 move 4 to curr_facing end-if
     *> display "STAT: " curr_facing " " test_facing " BUFF: " dir_buff
 
+    *> Make sure you get last moves, where there is no subsequent dir to trigger move.
+    if dir_str_idx = length of function trim(dir_str)
+      move curr_facing to test_facing
+    end-if
+
     *> If the direction buffer is spaces, then a rotation was given. So, we can execute the previous forward amount.
     if test_facing <> 5
       move dir_buff to dir_num
@@ -142,12 +131,14 @@ procedure division.
         end-if
 
       end-perform
+
       move spaces to dir_buff
       move 0 to dir_num
+
     end-if
   end-perform
 
-  display "END: " curr_x ", " curr_y
+  display "END: X: " curr_x " Y: " curr_y
 
   compute total_found = (1000 * curr_y) + (4 * curr_x) + curr_facing
 
