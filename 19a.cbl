@@ -43,6 +43,7 @@ data division.
       02 states_cnt pic 9(8) comp.
       02 states occurs 999999 times indexed by states_idx.
         03 minute pic 9(2) comp value 1.
+        03 prior_state usage is index.
         03 minerals.
           05 ore_num pic 9(2) comp value 0.
           05 clay_num pic 9(2) comp value 0.
@@ -59,10 +60,11 @@ data division.
     01 v_all_states.
       *> 02 high_state usage is index.
       02 v_create_state pic 9.
-      *> 02 states_head usage is index.
+      02 states_head usage is index.
       02 v_states_cnt pic 9(8) comp.
       02 v_states occurs 999999 times indexed by v_states_idx.
         03 v_minute pic 9(2) comp value 1.
+        03 v_prior_state usage is index.
         03 v_minerals.
           05 v_ore_num pic 9(2) comp value 0.
           05 v_clay_num pic 9(2) comp value 0.
@@ -82,6 +84,7 @@ data division.
 
     01 curr_state.
       03 curr_minute pic 9(2) comp value 1.
+      03 curr_prior_state usage is index.
       03 curr_minerals.
         05 curr_ore_num pic 9(2) comp value 0.
         05 curr_clay_num pic 9(2) comp value 0.
@@ -95,8 +98,15 @@ data division.
       03 curr_state_score pic 9(18).
       *> 03 state_score_str pic x(18).
 
+    77 orig_ore_num pic 9(2) comp.
+    77 orig_clay_num pic 9(2) comp.
+    77 orig_obsidian_num pic 9(2) comp.
+    77 orig_geode_num pic 9(2) comp.
+    77 bot_built pic 9.
+
     01 high_state.
       03 high_minute pic 9(2) comp value 1.
+      03 high_prior_state usage is index.
       03 high_minerals.
         05 high_ore_num pic 9(2) comp value 0.
         05 high_clay_num pic 9(2) comp value 0.
@@ -109,16 +119,19 @@ data division.
         05 high_num_geode_bots pic 9(2) comp value 0.
       03 high_state_score pic 9(18).
 
-    77 best_geode_minute pic 9(2) comp.
-    77 best_geode_bots pic 9(2) comp.
-    77 best_geode_num pic 9(2) comp.
+    01 best_minutes_stuff.
+      02 best_minute_cnt pic 9(2) comp.
+      02 best_minute occurs 24 times.
+        03 best_geode_minute pic 9(2) comp.
+        03 best_geode_bots pic 9(2) comp.
+        03 best_geode_num pic 9(2) comp.
 
     77 print_idx usage is index.
 
     77 total_found pic s9(8) comp.
 
 procedure division.
-  *> call 'lib-readdata' using function module-id ".dat" rf_all_lines
+*>   call 'lib-readdata' using function module-id ".dat" rf_all_lines
   call 'lib-readdata' using function module-id ".da1" rf_all_lines
 
   move 0 to total_found
@@ -147,53 +160,83 @@ procedure division.
     display "BOT[" bp_idx "]: ORE: " ore_bot_ore(bp_idx) "  CLY: " clay_bot_ore(bp_idx) "  OBS: " obsidian_bot_ore(bp_idx) " + " obsidian_bot_clay(bp_idx) "  GEO: " geode_bot_ore(bp_idx) " + " geode_bot_obsidian(bp_idx)
   end-perform
 
-  add 1 to states_cnt
-  move 1 to minute(states_cnt)
-  move 1 to num_ore_bots(states_cnt)
+*>   perform varying bp_idx from 1 by 1 until bp_idx > bp_cnt
+  perform varying bp_idx from 1 by 1 until bp_idx > 1
+    move 2 to bp_idx
 
-  move states_cnt to print_idx
-  perform print_state
+    initialize all_states
+    initialize v_all_states
+    initialize curr_state
+    initialize high_state
+    initialize best_minutes_stuff
 
-  move 1 to bp_idx
-  compute max_ore_bots = ore_bot_ore(bp_idx) + clay_bot_ore(bp_idx) + obsidian_bot_ore(bp_idx) + geode_bot_ore(bp_idx)
-  compute max_ore_total = ore_bot_ore(bp_idx) + clay_bot_ore(bp_idx) + obsidian_bot_ore(bp_idx) + geode_bot_ore(bp_idx)
-  *> compute max_ore_bots = function max(ore_bot_ore(bp_idx) clay_bot_ore(bp_idx) obsidian_bot_ore(bp_idx) geode_bot_ore(bp_idx))
+    add 1 to states_cnt
+    move 1 to minute(states_cnt)
+    move 1 to num_ore_bots(states_cnt)
 
-  move obsidian_bot_clay(bp_idx) to max_clay_bots
-  move geode_bot_obsidian(bp_idx) to max_obsidian_bots
+    *> move states_cnt to print_idx
+    *> perform print_state
 
-  display "BOT MAXES: ORE: " max_ore_bots " CLY: " max_clay_bots " OBS: " max_obsidian_bots
+  *>   move 1 to bp_idx
+    *> move 2 to bp_idx
+    compute max_ore_bots = ore_bot_ore(bp_idx) + clay_bot_ore(bp_idx) + obsidian_bot_ore(bp_idx) + geode_bot_ore(bp_idx)
+    *> move 2 to max_ore_bots
+    compute max_ore_total = ore_bot_ore(bp_idx) + clay_bot_ore(bp_idx) + obsidian_bot_ore(bp_idx) + geode_bot_ore(bp_idx)
+    *> compute max_ore_bots = function max(ore_bot_ore(bp_idx) clay_bot_ore(bp_idx) obsidian_bot_ore(bp_idx) geode_bot_ore(bp_idx))
 
-  *> BFS
-  *> perform process_state until states_head > states_cnt or curr_minute = 25
+    move obsidian_bot_clay(bp_idx) to max_clay_bots
+    move geode_bot_obsidian(bp_idx) to max_obsidian_bots
 
-  *> DFS
-  perform process_state until states_cnt = 0
+    display "BOT MAXES: ORE: " max_ore_bots " CLY: " max_clay_bots " OBS: " max_obsidian_bots
 
-  *> display "HIGHEST : " no advancing
-  *> move high_state to print_idx
-  *> perform print_state
-  *> display "FINAL: " geode_num(high_state)
+    *> BFS
+    move 1 to states_head
+    perform process_state until states_head > states_cnt
+    *> perform process_state until states_head > states_cnt or curr_minute = 25
 
-  display "MIN[" high_minute "][" high_state_score "]: ORE " high_ore_num " CLY: " high_clay_num " OBS: " high_obsidian_num " GEO: " high_geode_num " === BOTS: ORE: " high_num_ore_bots " CLY: " high_num_clay_bots " OBS: " high_num_obsidian_bots " GEO: " high_num_geode_bots
-  display "FINAL: " high_geode_num
+    *> DFS
+    *> perform process_state until states_cnt = 0
+
+    *> display "HIGHEST : " no advancing
+    *> move high_state to print_idx
+    *> perform print_state
+    *> display "FINAL: " geode_num(high_state)
+
+    *> display "MIN[" high_minute "][" high_state_score "]: ORE " high_ore_num " CLY: " high_clay_num " OBS: " high_obsidian_num " GEO: " high_geode_num " === BOTS: ORE: " high_num_ore_bots " CLY: " high_num_clay_bots " OBS: " high_num_obsidian_bots " GEO: " high_num_geode_bots
+    *> move high_prior_state to print_idx
+    *> perform varying gen_idx from 1 by 1 until print_idx < 1
+    *>   perform print_v_state
+    *>   move v_prior_state(print_idx) to print_idx
+    *> end-perform
+
+
+
+    display "HIGH: [" bp_idx "] " high_geode_num
+
+    compute total_found = total_found + (bp_idx * high_geode_num)
+  end-perform
+
+  display "FINAL: " total_found
 
   goback.
 
 
 process_state.
-  move states_cnt to print_idx
-  display "START " no advancing
-  perform print_state
+  *> move states_cnt to print_idx
+  *> display "START " no advancing
+  *> perform print_state
 
-  *> Move states_cnt to states_head
-  move states(states_cnt) to curr_state
+  *> Make a copy for convenience.
+*>   move states(states_head) to curr_state  *> BFS
+*>   add 1 to states_head  *> Remove from "queue". (BFS)
+  move states(states_cnt) to curr_state  *> DFS
+  subtract 1 from states_cnt  *> Remove from "stack". (DFS)
 
-  *> Add to visited states
-  add 1 to v_states_cnt
-  move states(states_cnt) to v_states(v_states_cnt)
+  *> Add to visited states.
+*>   add 1 to v_states_cnt
+*>   move curr_state to v_states(v_states_cnt)
 
-  subtract 1 from states_cnt
+
 
   *> Get score of this branch
   *> Comp values produce garbage if treated as alpha without move.
@@ -209,17 +252,23 @@ process_state.
   *> end-string
   *> move curr_state_score_str to curr_state_score
   *> display "SCORE: " curr_state_score_str " " curr_state_score
-  compute curr_state_score = 
+  compute curr_state_score =
+         ((24 - curr_minute)* 10000000000000000) +
          (curr_num_geode_bots * 100000000000000) +
          (curr_geode_num        * 1000000000000) +
-         (curr_num_obsidian_bots  * 10000000000) + 
-         (curr_obsidian_num         * 100000000) + 
-         (curr_num_clay_bots          * 1000000) + 
-         (curr_clay_num                 * 10000) + 
+         (curr_num_obsidian_bots  * 10000000000) +
+         (curr_obsidian_num         * 100000000) +
+         (curr_num_clay_bots          * 1000000) +
+         (curr_clay_num                 * 10000) +
          (curr_num_ore_bots               * 100) +
          curr_ore_num
   *> display "SCORE: " curr_state_score
-  
+
+  *> Store original amounts to determine bot creation options.
+  move curr_ore_num to orig_ore_num
+  move curr_clay_num to orig_clay_num
+  move curr_obsidian_num to orig_obsidian_num
+  move curr_geode_num to orig_geode_num
 
   *> Mineral collection.
   add curr_num_ore_bots to curr_ore_num
@@ -240,13 +289,15 @@ process_state.
   *> perform print_state
 
   *> Building new bots and adding new decision branches.
-  if curr_obsidian_num >= geode_bot_obsidian(bp_idx) and curr_ore_num >= geode_bot_ore(bp_idx)
+  move 0 to bot_built
+  if orig_obsidian_num >= geode_bot_obsidian(bp_idx) and orig_ore_num >= geode_bot_ore(bp_idx)
     *> Can we add more than one bot in a turn? Would that even make sense? Disabling, because it starts to add a ton of branches later on.
     *> perform until curr_obsidian_num < geode_bot_obsidian(bp_idx) or curr_ore_num < geode_bot_ore(bp_idx)
     *>   perform add_branch
       subtract geode_bot_obsidian(bp_idx) from curr_obsidian_num
       subtract geode_bot_ore(bp_idx) from curr_ore_num
       add 1 to curr_num_geode_bots
+      add 1 to bot_built
       perform add_branch
 
       *> move states_cnt to print_idx
@@ -254,7 +305,8 @@ process_state.
       *> perform print_state
     *> end-perform
   end-if
-  if curr_clay_num >= obsidian_bot_clay(bp_idx) and curr_ore_num >= obsidian_bot_ore(bp_idx)
+  if bot_built = 0
+      and orig_clay_num >= obsidian_bot_clay(bp_idx) and orig_ore_num >= obsidian_bot_ore(bp_idx)
       and curr_num_obsidian_bots < max_obsidian_bots
     *> perform until curr_clay_num < obsidian_bot_clay(bp_idx) or curr_ore_num < obsidian_bot_ore(bp_idx)
       *> Even though we have enough, we'll skip?
@@ -262,6 +314,7 @@ process_state.
       subtract obsidian_bot_clay(bp_idx) from curr_clay_num
       subtract obsidian_bot_ore(bp_idx) from curr_ore_num
       add 1 to curr_num_obsidian_bots
+      add 1 to bot_built
       perform add_branch
 
       *> move states_cnt to print_idx
@@ -269,12 +322,14 @@ process_state.
       *> perform print_state
     *> end-perform
   end-if
-  if curr_ore_num >= clay_bot_ore(bp_idx) and curr_num_clay_bots < max_clay_bots
+  if bot_built = 0
+      and orig_ore_num >= clay_bot_ore(bp_idx) and curr_num_clay_bots < max_clay_bots
     *> perform until curr_ore_num < clay_bot_ore(bp_idx)
       *> Even though we have enough, we'll skip?
     *>   perform add_branch
       subtract clay_bot_ore(bp_idx) from curr_ore_num
       add 1 to curr_num_clay_bots
+      add 1 to bot_built
       perform add_branch
 
       *> move states_cnt to print_idx
@@ -282,13 +337,15 @@ process_state.
       *> perform print_state
     *> end-perform
   end-if
-  if curr_ore_num >= ore_bot_ore(bp_idx) and curr_num_ore_bots < max_ore_bots
+  if bot_built = 0
+      and orig_ore_num >= ore_bot_ore(bp_idx) and curr_num_ore_bots < max_ore_bots
     *> perform until curr_ore_num < ore_bot_ore(bp_idx)
       *> Even though we have enough, we'll add a skip scenario for each possible new collector.
     *>   perform add_branch
       *> Add branch where something is done!
       subtract ore_bot_ore(bp_idx) from curr_ore_num
       add 1 to curr_num_ore_bots
+      add 1 to bot_built
       perform add_branch
 
       *> move states_cnt to print_idx
@@ -302,6 +359,8 @@ process_state.
   *> end-if
   if curr_geode_num > high_geode_num
     move curr_state to high_state
+    compute high_minute = high_minute + 1
+    move v_states_cnt to high_prior_state
   end-if
 
   *> move states_head to print_idx
@@ -316,46 +375,83 @@ add_branch.
   move 1 to create_state
 
   *> Pruning.
-  if curr_minute >= 24  *> Limit of puzzle
+  *> Test for highest is at the end of each round, while adding happens in the middle. So, we end if 24.
+  if curr_minute >= 24  *> Limit of puzzle.
       or curr_ore_num > max_ore_total  *> Stop branches with ore hogs.
-      or (curr_minute > 20 and curr_state_score < 100000000000000)  *> If you don't have a geode_bot by 20, you're not doing your job.
-    display "SKIP: INITIAL PRUNING."
+    *>   or (curr_minute > 20 and curr_state_score < 100000000000000)  *> If you don't have a geode_bot by 20, you're not doing your job.
+    *>   or curr_geode_num = 1
+    *> or curr_obsidian_num = 1
+    *> display "SKIP: INITIAL PRUNING."
     move 0 to create_state
   end-if
 
-  *> See if this end of path is the best from the first time a geode bot is seen.
-  if (curr_minute + 1) > best_geode_minute
-      and curr_num_geode_bots < best_geode_bots
-      *> and curr_geode_num < best_geode_num
-    display "SKIP: NOT BEST ENDING."
-    move 0 to create_state
-  else
-    if (best_geode_minute <> 0 and (curr_minute + 1) < best_geode_minute)
-    and curr_num_geode_bots >= best_geode_bots
-    *> and curr_geode_num >= best_geode_num
-      compute best_geode_minute = curr_minute + 1
-      move curr_num_geode_bots to best_geode_bots
-      *> move curr_geode_num to best_geode_num
-      display "BEST: NEW VALUE! " best_geode_minute best_geode_bots best_geode_num
-    end-if
-  end-if
+*>   if create_state = 1 and curr_geode_num = 1
+*>     move 0 to create_state
 
-  *> Avoid states already visited.
-  perform varying v_states_idx from 1 by 1 until v_states_idx > v_states_cnt or create_state = 0
-    *> if v_states(v_states_idx) = curr_state
-    if curr_minute + 1 = v_minute(v_states_idx)
-        and curr_ore_num = v_ore_num(v_states_idx)
-        and curr_clay_num = v_clay_num(v_states_idx)
-        and curr_obsidian_num = v_obsidian_num(v_states_idx)
-        and curr_geode_num = v_geode_num(v_states_idx)
-        and curr_num_ore_bots = v_num_ore_bots(v_states_idx)
-        and curr_num_clay_bots = v_num_clay_bots(v_states_idx)
-        and curr_num_obsidian_bots = v_num_obsidian_bots(v_states_idx)
-        and curr_num_geode_bots = v_num_geode_bots(v_states_idx)
-      display "SKIP: DUPE!"
-      move 0 to create_state
-    end-if
-  end-perform
+*>     if curr_state_score > high_state_score
+*>       move curr_state to high_state
+*>       compute high_minute = high_minute + 1
+*>       move v_states_cnt to high_prior_state
+*>     end-if
+
+*>     *> display "OBS: " no advancing
+*>     *> perform print_curr_state
+*>   end-if
+
+*>   *> See if this end of path is the best from the first time a geode bot is seen.
+*>   if create_state = 1
+*>     if curr_num_obsidian_bots < best_geode_bots(curr_minute)
+*>         *> and curr_geode_num < best_geode_num
+*>       *> display "SKIP: NOT BEST ENDING."
+*>       move 0 to create_state
+*>     else
+*>       if best_geode_minute(curr_minute) = 0
+*>       *> or ((curr_minute + 1) < best_geode_minute and curr_num_geode_bots >= best_geode_bots)
+*>           or (curr_num_obsidian_bots > best_geode_bots(curr_minute))
+*>       *> and curr_geode_num >= best_geode_num
+*>         compute best_geode_minute(curr_minute) = curr_minute + 1
+*>         move curr_num_obsidian_bots to best_geode_bots(curr_minute)
+*>         *> move curr_geode_num to best_geode_num
+*>         *> display "BEST: NEW VALUE! " best_geode_minute(curr_minute) " " best_geode_bots(curr_minute) " " best_geode_num(curr_minute)
+*>       end-if
+*>     end-if
+*>   end-if
+
+  *> *> See if this end of path is the best from the first time a geode bot is seen.
+  *> if create_state = 1 and curr_minute > 15
+  *>   if curr_num_geode_bots < best_geode_bots(curr_minute)
+  *>       *> and curr_geode_num < best_geode_num
+  *>     *> display "SKIP: NOT BEST ENDING."
+  *>     move 0 to create_state
+  *>   else
+  *>     if best_geode_minute(curr_minute) = 0
+  *>     *> or ((curr_minute + 1) < best_geode_minute and curr_num_geode_bots >= best_geode_bots)
+  *>         or (curr_num_geode_bots > best_geode_bots(curr_minute))
+  *>     *> and curr_geode_num >= best_geode_num
+  *>       compute best_geode_minute(curr_minute) = curr_minute + 1
+  *>       move curr_num_geode_bots to best_geode_bots(curr_minute)
+  *>       *> move curr_geode_num to best_geode_num
+  *>       *> display "BEST: NEW VALUE! " best_geode_minute(curr_minute) " " best_geode_bots(curr_minute) " " best_geode_num(curr_minute)
+  *>     end-if
+  *>   end-if
+  *> end-if
+
+  *> Avoid states already visited. (Mostly for DFS)
+*>   perform varying v_states_idx from 1 by 1 until v_states_idx > v_states_cnt or create_state = 0
+*>     if v_states(v_states_idx) = curr_state
+*>     *> if curr_minute + 1 = v_minute(v_states_idx)
+*>     *>     and curr_ore_num = v_ore_num(v_states_idx)
+*>     *>     and curr_clay_num = v_clay_num(v_states_idx)
+*>     *>     and curr_obsidian_num = v_obsidian_num(v_states_idx)
+*>     *>     and curr_geode_num = v_geode_num(v_states_idx)
+*>     *>     and curr_num_ore_bots = v_num_ore_bots(v_states_idx)
+*>     *>     and curr_num_clay_bots = v_num_clay_bots(v_states_idx)
+*>     *>     and curr_num_obsidian_bots = v_num_obsidian_bots(v_states_idx)
+*>     *>     and curr_num_geode_bots = v_num_geode_bots(v_states_idx)
+*>         *> display "SKIP: DUPE!"
+*>       move 0 to create_state
+*>     end-if
+*>   end-perform
   *> perform varying states_idx from 1 by 1 until states_idx > states_cnt or create_state = 0
   *>   *> if states_idx <> states_head  *> Only relevant for BFS?
   *>     if minute(states_idx) = curr_minute + 1
@@ -391,22 +487,24 @@ add_branch.
     *> move curr_num_obsidian_bots to num_obsidian_bots(states_cnt)
     *> move curr_num_geode_bots to num_geode_bots(states_cnt)
 
-    if curr_minute <> minute(states_cnt)
-        or curr_ore_num <> ore_num(states_cnt)
-        or curr_clay_num <> clay_num(states_cnt)
-        or curr_obsidian_num <> obsidian_num(states_cnt)
-        or curr_geode_num <> geode_num(states_cnt)
-        or curr_num_ore_bots <> num_ore_bots(states_cnt)
-        or curr_num_clay_bots <> num_clay_bots(states_cnt)
-        or curr_num_obsidian_bots <> num_obsidian_bots(states_cnt)
-        or curr_num_geode_bots <> num_geode_bots(states_cnt)
-      display ">>>>>>>>>>>>> NOT COPYING CORRECTLY <<<<<<<<<<<<"
-    end-if
-    add 1 to minute(states_cnt)
+    *> if curr_minute <> minute(states_cnt)
+    *>     or curr_ore_num <> ore_num(states_cnt)
+    *>     or curr_clay_num <> clay_num(states_cnt)
+    *>     or curr_obsidian_num <> obsidian_num(states_cnt)
+    *>     or curr_geode_num <> geode_num(states_cnt)
+    *>     or curr_num_ore_bots <> num_ore_bots(states_cnt)
+    *>     or curr_num_clay_bots <> num_clay_bots(states_cnt)
+    *>     or curr_num_obsidian_bots <> num_obsidian_bots(states_cnt)
+    *>     or curr_num_geode_bots <> num_geode_bots(states_cnt)
+    *>   display ">>>>>>>>>>>>> NOT COPYING CORRECTLY <<<<<<<<<<<<"
+    *> end-if
 
-    move states_cnt to print_idx
-    display "ADDED " no advancing
-    perform print_state
+    add 1 to minute(states_cnt)
+    move v_states_cnt to prior_state(states_cnt)
+
+    *> move states_cnt to print_idx
+    *> display "ADDED " no advancing
+    *> perform print_state
   end-if
   .
 
@@ -414,6 +512,13 @@ print_state.
   display "MIN[" minute(print_idx) "][" state_score(print_idx) "]: ORE " ore_num(print_idx) " CLY: " clay_num(print_idx) " OBS: " obsidian_num(print_idx) " GEO: " geode_num(print_idx) " === BOTS: ORE: " num_ore_bots(print_idx) " CLY: " num_clay_bots(print_idx) " OBS: " num_obsidian_bots(print_idx) " GEO: " num_geode_bots(print_idx)
   .
 
+print_v_state.
+  display "MIN[" v_minute(print_idx) "][" v_state_score(print_idx) "]: ORE " v_ore_num(print_idx) " CLY: " v_clay_num(print_idx) " OBS: " v_obsidian_num(print_idx) " GEO: " v_geode_num(print_idx) " === BOTS: ORE: " v_num_ore_bots(print_idx) " CLY: " v_num_clay_bots(print_idx) " OBS: " v_num_obsidian_bots(print_idx) " GEO: " v_num_geode_bots(print_idx)
+  .
+
+print_curr_state.
+  display "MIN[" curr_minute "][" curr_state_score "]: ORE " curr_ore_num " CLY: " curr_clay_num " OBS: " curr_obsidian_num " GEO: " curr_geode_num " === BOTS: ORE: " curr_num_ore_bots " CLY: " curr_num_clay_bots " OBS: " curr_num_obsidian_bots " GEO: " curr_num_geode_bots
+  .
 
 *>  77 skip_ore_bots pic 9.
 *>  77 skip_clay_bots pic 9.
