@@ -48,15 +48,15 @@ procedure division.
       move rf_row(rf_idx)(7:) to inst_num(rf_idx)
     end-if
   end-perform
-  display "=== INST ==="
-  perform varying inst_idx from 1 by 1 until inst_idx > inst_cnt
-    if inst_oper(inst_idx) <> space
-      display inst_name(inst_idx) ": " inst_left(inst_idx) " " inst_oper(inst_idx) " " inst_right(inst_idx)
-    else
-      display inst_name(inst_idx) ": " inst_num(inst_idx)
-    end-if
-  end-perform
-  display "============"
+  *> display "=== INST ==="
+  *> perform varying inst_idx from 1 by 1 until inst_idx > inst_cnt
+  *>   if inst_oper(inst_idx) <> space
+  *>     display inst_name(inst_idx) ": " inst_left(inst_idx) " " inst_oper(inst_idx) " " inst_right(inst_idx)
+  *>   else
+  *>     display inst_name(inst_idx) ": " inst_num(inst_idx)
+  *>   end-if
+  *> end-perform
+  *> display "============"
 
   move "root" to stack_target
   perform get_value
@@ -90,10 +90,6 @@ get_value.
     move stack_value to inst_right_num(stack_inst_idx(stack_cnt))
 
     evaluate inst_oper(stack_inst_idx(stack_cnt))
-    *>   when "+" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) + inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE + OVERFLOW!!! <<<<<" end-compute
-    *>   when "-" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) - inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE - OVERFLOW!!! <<<<<" end-compute
-    *>   when "*" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) * inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE * OVERFLOW!!! <<<<<" end-compute
-    *>   when "/" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) / inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE / OVERFLOW!!! <<<<<" end-compute
       when "+" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) + inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE + OVERFLOW!!! <<<<<" end-compute
       when "-" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) - inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE - OVERFLOW!!! <<<<<" end-compute
       when "*" compute inst_num(stack_inst_idx(stack_cnt)) = inst_left_num(stack_inst_idx(stack_cnt)) * inst_right_num(stack_inst_idx(stack_cnt)) on size error display ">>>>> COMPUTE * OVERFLOW!!! <<<<<" end-compute
