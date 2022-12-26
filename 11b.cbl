@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 11a.
+program-id. 11b.
 
 data division.
   working-storage section.

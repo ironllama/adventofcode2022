@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 10a.
+program-id. 10b.
 
 data division.
   working-storage section.
@@ -45,7 +45,7 @@ procedure division.
       into instr amt
     end-unstring
     *> display "NEW: " function trim(instr) " : " amt " x-before: " x_val
-    
+
     if instr = "noop"
       perform check_cycle  *> Doing this before first increment, CRT line is 0-indexed
       add 1 to total_cycles
@@ -56,7 +56,7 @@ procedure division.
           perform check_cycle
           add 1 to total_cycles
           *> perform check_cycle
-  
+
           if add_cycle_idx = 2
             compute x_val = x_val + amt
           end-if
@@ -72,7 +72,7 @@ check_cycle.
   if function mod(total_cycles 40) = 0
     display space
   end-if
-  
+
   *> Get current drawing pixel position
   move function mod(total_cycles 40) to line_pos
 
@@ -83,4 +83,3 @@ check_cycle.
     display "." no advancing
   end-if
   .
-  

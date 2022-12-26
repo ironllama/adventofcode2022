@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 02a.
+program-id. 02a2.
 
 data division.
   working-storage section.

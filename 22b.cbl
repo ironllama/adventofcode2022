@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 22a.
+program-id. 22b.
 
 data division.
   working-storage section.
@@ -237,7 +237,7 @@ procedure division.
 
       move spaces to dir_buff
       move 0 to dir_num
-      
+
     end-if
   end-perform
 

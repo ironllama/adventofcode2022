@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 23a.
+program-id. 23b.
 
 data division.
   working-storage section.
@@ -18,7 +18,7 @@ data division.
     01 map_stuff.
       02 map_row occurs 9999 times indexed by map_row_idx.
         03 map_char pic x occurs 9999 times indexed by map_col_idx.
-    
+
     01 temp_map.
       02 temp_map_row occurs 9999 times indexed by temp_map_row_idx.
         03 temp_map_char pic x occurs 9999 times indexed by temp_map_col_idx.
@@ -89,7 +89,7 @@ procedure division.
   *>      if map_char(map_row_idx map_col_idx) = "." add 1 to total_found end-if
   *>   end-perform
   *>   *> display space
-  *> end-perform 
+  *> end-perform
 
   compute total_found = round_cnt
 

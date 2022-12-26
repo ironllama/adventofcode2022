@@ -1,6 +1,6 @@
            >>source format free
 identification division.
-program-id. 03a.
+program-id. 03b.
 
 data division.
   working-storage section.
@@ -23,7 +23,7 @@ data division.
     77 all_chars pic x(52).
     77 all_chars_idx pic 9(2) comp.
     77 final_points pic 9(4) comp.
-  
+
 procedure division.
   call 'lib-readfile' using function module-id rf_all_lines
   *> move "vJrwpWtwJgWrhcsFMMfFFhFp" to rf_line_row(1)
