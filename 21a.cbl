@@ -24,6 +24,7 @@ data division.
 
     01 stack_stuff.
       02 stack_target pic x(4).
+      02 stack_target_id usage is index.
       02 stack_value pic s9(18) comp.
       02 stack_cnt pic s9(4) comp.
       02 stack occurs 9999 times indexed by stack_idx.
@@ -68,16 +69,14 @@ procedure division.
 
 
 get_value.
+  *> Make sure to set the stack-target before calling get_value!
+
   add 1 to stack_cnt on size error display ">>>>> STACK OVERFLOW! <<<<<" end-add
   *> display "get_value: " stack_target
 
-  move 0 to inst_found
-  perform varying inst_idx from 1 by 1 until inst_idx > inst_cnt or inst_found = 1
-    if inst_name(inst_idx) = stack_target
-      move inst_idx to stack_inst_idx(stack_cnt)
-      move 1 to inst_found
-    end-if
-  end-perform
+  *> Look for instruction given as stack_target in the list.
+  perform find_inst
+  move stack_target_id to stack_inst_idx(stack_cnt)
   *> display "FOUND: " inst_found " " stack_inst_idx(stack_cnt) " " inst_name(stack_inst_idx(stack_cnt)) " " inst_left(stack_inst_idx(stack_cnt)) " " inst_num(stack_inst_idx(stack_cnt))
 
   if inst_num(stack_inst_idx(stack_cnt)) = 0
@@ -97,6 +96,18 @@ get_value.
     end-evaluate
   end-if
 
+  *> display "CURR: [" stack_cnt "]: " inst_name(stack_inst_idx(stack_cnt)) " L: " inst_left(stack_inst_idx(stack_cnt)) " " inst_oper(stack_inst_idx(stack_cnt)) " " inst_right(stack_inst_idx(stack_cnt)) " SO FAR: " inst_num(stack_inst_idx(stack_cnt))
   move inst_num(stack_inst_idx(stack_cnt)) to stack_value
   subtract 1 from stack_cnt
+  .
+
+find_inst.
+  *> Look for instruction given as stack_target in the list.
+  move 0 to inst_found
+  perform varying inst_idx from 1 by 1 until inst_idx > inst_cnt or inst_found = 1
+    if inst_name(inst_idx) = stack_target
+      move inst_idx to stack_target_id
+      move 1 to inst_found
+    end-if
+  end-perform
   .
