@@ -88,29 +88,4 @@ check_neighbor.
       move 1 to is_neighbor
     end-if
   end-if
-  *> *> If this is a neighbor of
-  *> if cube_x(cube_idx) = cube_x(temp_idx) + 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE X + 1"
-  *> end-if
-  *> if cube_x(cube_idx) = cube_x(temp_idx) - 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE X - 1"
-  *> end-if
-  *> if cube_y(cube_idx) = cube_y(temp_idx) + 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE Y + 1"
-  *> end-if
-  *> if cube_y(cube_idx) = cube_y(temp_idx) - 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE Y - 1"
-  *> end-if
-  *> if cube_z(cube_idx) = cube_z(temp_idx) + 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE Z + 1"
-  *> end-if
-  *> if cube_z(cube_idx) = cube_z(temp_idx) - 1
-    *> subtract 1 from num_sides
-    *> display "SHARED SIDE Z - 1"
-  *> end-if
   .
