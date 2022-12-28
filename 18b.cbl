@@ -37,15 +37,17 @@ data division.
     01 y_idx pic s9(8) comp.
     01 x_idx pic s9(8) comp.
 
-    01 all_explored.
-      02 explored_cnt pic 9(8) comp.
-      02 explored_exists pic x value 'N'.
-        88 explored_not_found value 'N'.
-        88 explored_found value 'Y'.
-      02 explored occurs 9999 times indexed by explored_idx.
-        03 explored_x pic s9(2) comp.
-        03 explored_y pic s9(2) comp.
-        03 explored_z pic s9(2) comp.
+    *> Since we visit all the squares only once (checked before adding to queue),
+    *> we don't need a separate visited list.
+    *> 01 all_explored.
+    *>   02 explored_cnt pic 9(8) comp.
+    *>   02 explored_exists pic x value 'N'.
+    *>     88 explored_not_found value 'N'.
+    *>     88 explored_found value 'Y'.
+    *>   02 explored occurs 9999 times indexed by explored_idx.
+    *>     03 explored_x pic s9(2) comp.
+    *>     03 explored_y pic s9(2) comp.
+    *>     03 explored_z pic s9(2) comp.
 
     01 go_queue_stuff.
       02 go_queue_cnt pic 9(8) comp.
@@ -148,8 +150,10 @@ procedure division.
     end-perform
 
     *> If not next to a BFS/air cube.
-    perform varying temp_idx from 1 by 1 until temp_idx > explored_cnt
-      perform check_explored
+    *> perform varying temp_idx from 1 by 1 until temp_idx > explored_cnt
+    *>   perform check_explored
+    perform varying temp_idx from 1 by 1 until temp_idx > go_queue_cnt
+      perform check_queue
       if is_neighbor subtract 1 from num_sides end-if
     end-perform
 
@@ -166,8 +170,9 @@ procedure division.
 
 
 bfs_against_outside.
-  add 1 to explored_cnt
-  move curr_node to explored(explored_cnt)
+  *> add 1 to explored_cnt
+  *> move curr_node to explored(explored_cnt)
+
   add 1 to go_queue_cnt
   move curr_node to go_queue(go_queue_cnt)
 
@@ -223,25 +228,39 @@ bfs_against_outside.
   .
 
 add_to_queue.
-  perform check_exists_in_explored
+  *> perform check_exists_in_explored
+  perform check_exists_in_queue
+
   perform check_exists_in_cubes
 
-  if explored_not_found and cube_not_found
-    add 1 to explored_cnt
-    move curr_node to explored(explored_cnt)
+  *> if explored_not_found and cube_not_found
+  if go_queue_not_found and cube_not_found
+    *> add 1 to explored_cnt
+    *> move curr_node to explored(explored_cnt)
 
     add 1 to go_queue_cnt
     move curr_node to go_queue(go_queue_cnt)
   end-if
   .
 
-check_exists_in_explored.
-  set explored_not_found to true
-  perform varying explored_idx from 1 by 1 until explored_idx > explored_cnt or explored_found
-    if explored_x(explored_idx) = curr_x
-        and explored_y(explored_idx) = curr_y
-        and explored_z(explored_idx) = curr_z
-      set explored_found to true
+*> check_exists_in_explored.
+*>   set explored_not_found to true
+*>   perform varying explored_idx from 1 by 1 until explored_idx > explored_cnt or explored_found
+*>     if explored_x(explored_idx) = curr_x
+*>         and explored_y(explored_idx) = curr_y
+*>         and explored_z(explored_idx) = curr_z
+*>       set explored_found to true
+*>     end-if
+*>   end-perform
+*>   .
+
+check_exists_in_queue.
+  set go_queue_not_found to true
+  perform varying go_queue_idx from 1 by 1 until go_queue_idx > go_queue_cnt or go_queue_found
+    if go_queue_x(go_queue_idx) = curr_x
+        and go_queue_y(go_queue_idx) = curr_y
+        and go_queue_z(go_queue_idx) = curr_z
+      set go_queue_found to true
     end-if
   end-perform
   .
@@ -257,35 +276,65 @@ check_exists_in_cubes.
   end-perform
   .
 
-check_explored.
-  *> display "CHECKING EXPLORED: " cube_idx " " temp_idx
+check_queue.
+  *> display "CHECKING go_queue: " cube_idx " " temp_idx
   *> move 0 to is_neighbor
   set is_not_neighbor to true
-  if cube_x(cube_idx) = explored_x(temp_idx)
-    if cube_y(cube_idx) = explored_y(temp_idx)
-      if cube_z(cube_idx) = explored_z(temp_idx) + 1
-          or cube_z(cube_idx) = explored_z(temp_idx) - 1
+  if cube_x(cube_idx) = go_queue_x(temp_idx)
+    if cube_y(cube_idx) = go_queue_y(temp_idx)
+      if cube_z(cube_idx) = go_queue_z(temp_idx) + 1
+          or cube_z(cube_idx) = go_queue_z(temp_idx) - 1
         *> move 1 to is_neighbor
         set is_neighbor to true
       end-if
     else
-      if cube_z(cube_idx) = explored_z(temp_idx)
-          and (cube_y(cube_idx) = explored_y(temp_idx) + 1
-            or cube_y(cube_idx) = explored_y(temp_idx) - 1)
+      if cube_z(cube_idx) = go_queue_z(temp_idx)
+          and (cube_y(cube_idx) = go_queue_y(temp_idx) + 1
+            or cube_y(cube_idx) = go_queue_y(temp_idx) - 1)
         *> move 1 to is_neighbor
         set is_neighbor to true
       end-if
     end-if
   else
-    if cube_y(cube_idx) = explored_y(temp_idx)
-        and cube_z(cube_idx) = explored_z(temp_idx)
-        and (cube_x(cube_idx) = explored_x(temp_idx) + 1
-          or cube_x(cube_idx) = explored_x(temp_idx) - 1)
+    if cube_y(cube_idx) = go_queue_y(temp_idx)
+        and cube_z(cube_idx) = go_queue_z(temp_idx)
+        and (cube_x(cube_idx) = go_queue_x(temp_idx) + 1
+          or cube_x(cube_idx) = go_queue_x(temp_idx) - 1)
       *> move 1 to is_neighbor
       set is_neighbor to true
     end-if
   end-if
   .
+
+*> check_explored.
+*>   *> display "CHECKING EXPLORED: " cube_idx " " temp_idx
+*>   *> move 0 to is_neighbor
+*>   set is_not_neighbor to true
+*>   if cube_x(cube_idx) = explored_x(temp_idx)
+*>     if cube_y(cube_idx) = explored_y(temp_idx)
+*>       if cube_z(cube_idx) = explored_z(temp_idx) + 1
+*>           or cube_z(cube_idx) = explored_z(temp_idx) - 1
+*>         *> move 1 to is_neighbor
+*>         set is_neighbor to true
+*>       end-if
+*>     else
+*>       if cube_z(cube_idx) = explored_z(temp_idx)
+*>           and (cube_y(cube_idx) = explored_y(temp_idx) + 1
+*>             or cube_y(cube_idx) = explored_y(temp_idx) - 1)
+*>         *> move 1 to is_neighbor
+*>         set is_neighbor to true
+*>       end-if
+*>     end-if
+*>   else
+*>     if cube_y(cube_idx) = explored_y(temp_idx)
+*>         and cube_z(cube_idx) = explored_z(temp_idx)
+*>         and (cube_x(cube_idx) = explored_x(temp_idx) + 1
+*>           or cube_x(cube_idx) = explored_x(temp_idx) - 1)
+*>       *> move 1 to is_neighbor
+*>       set is_neighbor to true
+*>     end-if
+*>   end-if
+*>   .
 
 check_neighbor.
   *> display "CHECKING NEIGHBOR: " cube_idx " " temp_idx
@@ -349,15 +398,18 @@ display_z_axis.
         move y_idx to curr_y
         move z_idx to curr_z
         perform check_exists_in_cubes
-        perform check_exists_in_explored
+        *> perform check_exists_in_explored
+        perform check_exists_in_queue
 
-        if cube_found and explored_found
+        *> if cube_found and explored_found
+        if cube_found and go_queue_found
           display ">>>>> ERROR: EXISTS IN BOTH CUBES AND EXPLORED. <<<<<"
         else
           if cube_found
             display '#' no advancing
           else
-            if explored_found
+            *> if explored_found
+            if go_queue_found
               display "@" no advancing
             else
               display '.' no advancing
