@@ -18,21 +18,33 @@ data division.
     77 check_col_num pic s9(4) comp.
     77 check_return pic x.
 
-    *> For lib-astar/dijkstra
-    01 startPt pic s9(8) comp.
-    01 goalPt pic s9(8) comp.
     01 nodes.
-      02 nodes_len pic s9(8) comp value 0.
+    *>   02 nodes_len pic s9(8) comp value 0.
       02 nodes_per_row pic s9(4) comp.
       02 nodes_row pic s9(4) comp value 0 occurs 0 to 99999 times
           depending on nodes_len indexed by nodes_idx.
-    *> 01 heuristic procedure-pointer.
-    *> 01 curr_neighbor pic s9(8) comp.
-    *> 01 current pic s9(8) comp.
+
+    01 neighbor_ptr usage is index.
+    01 current_rowpos usage is index.
+    01 neighbor_rowpos usage is index.
+
+    *> For lib-astar/dijkstra
+    01 startPt usage is index.
+    01 goalPt usage is index.
+    01 nodes_len pic s9(8) comp.
+
+    01 get_neighbors procedure-pointer.
+    01 get_neighbors_stuff.
+      02 current_ptr usage is index.
+      02 curr_neighbors_num pic s9 comp.
+      02 curr_neighbors occurs 4 times indexed by curr_neighbors_idx.
+        03 curr_neighbor_ptr usage is index.
+        03 curr_neighbor_dist pic s9.
     01 path.
       02 path_len pic s9(8) comp value 0.
-      02 path_val pic s9(8) comp value 0 occurs 0 to 99999 times
+      02 path_val usage is index occurs 0 to 99999 times
           depending on path_len indexed by path_idx.
+
 
 procedure division.
   call 'lib-readdata' using function module-id ".dat" rf_all_lines
@@ -79,54 +91,96 @@ procedure division.
 
 *>   set heuristic to entry "heuristic"
 *>   call 'lib-astar' using startPt goalPt nodes heuristic curr_neighbor current path
-  call 'lib-dijkstra' using startPt goalPt nodes path
 
-  *> Show the shortest path values!
-  display "path: [" no advancing
-  perform varying path_idx from 1 by 1 until path_idx > path_len
-    display path_val(path_idx) no advancing
-    if path_idx < path_len
-      display ", " no advancing
-    end-if
-  end-perform
-  display "]"
-  *> Show the shortest path!
-  perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
-    perform varying row_idx from 1 by 1 until row_idx > nodes_per_row
-      set path_idx to 1
-      search path_val varying path_idx
-        at end display "." no advancing
-        when path_val(path_idx) = ((rf_line_idx - 1) * nodes_per_row) + row_idx
-        *>   display "#" no advancing
-          if path_val(path_idx) = path_val(path_idx - 1) - 1
-            display ">" no advancing
-          else
-            if path_val(path_idx) = path_val(path_idx - 1) + 1
-             display "<" no advancing
-           else
-             if path_val(path_idx) < (rf_line_cnt - 1) * nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) - nodes_per_row
-               display "v" no advancing
-             else
-               if path_val(path_idx) > nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) + nodes_per_row
-                 display "^" no advancing
-               else
-                 display "?" no advancing
-               end-if
-             end-if
-            end-if
-          end-if
-      end-search
-    end-perform
-    display space
-  end-perform
+  set get_neighbors to entry "get_neighbors"
+  call 'lib-dijkstra' using startPt goalPt nodes_len path get_neighbors get_neighbors_stuff
+
+*>   *> Show the shortest path values!
+*>   display "path: [" no advancing
+*>   perform varying path_idx from 1 by 1 until path_idx > path_len
+*>     display path_val(path_idx) no advancing
+*>     if path_idx < path_len
+*>       display ", " no advancing
+*>     end-if
+*>   end-perform
+*>   display "]"
+*>   *> Show the shortest path!
+*>   perform varying rf_line_idx from 1 by 1 until rf_line_idx > rf_line_cnt
+*>     perform varying row_idx from 1 by 1 until row_idx > nodes_per_row
+*>       set path_idx to 1
+*>       search path_val varying path_idx
+*>         at end display "." no advancing
+*>         when path_val(path_idx) = ((rf_line_idx - 1) * nodes_per_row) + row_idx
+*>         *>   display "#" no advancing
+*>           if path_val(path_idx) = path_val(path_idx - 1) - 1
+*>             display ">" no advancing
+*>           else
+*>             if path_val(path_idx) = path_val(path_idx - 1) + 1
+*>              display "<" no advancing
+*>            else
+*>              if path_val(path_idx) < (rf_line_cnt - 1) * nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) - nodes_per_row
+*>                display "v" no advancing
+*>              else
+*>                if path_val(path_idx) > nodes_per_row and path_val(path_idx) = path_val(path_idx - 1) + nodes_per_row
+*>                  display "^" no advancing
+*>                else
+*>                  display "?" no advancing
+*>                end-if
+*>              end-if
+*>             end-if
+*>           end-if
+*>       end-search
+*>     end-perform
+*>     display space
+*>   end-perform
 
   display "SIZE: " path_len
 
   goback.
 
 
+entry "get_neighbors"
+  set curr_neighbors_num to 0
+  *> Up
+  compute neighbor_ptr = current_ptr - nodes_per_row
+  *> display "UP" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_ptr > 0 perform add_neighbor end-if
+
+  *> Down
+  compute neighbor_ptr = current_ptr + nodes_per_row
+  *> display "DOWN" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_ptr <= nodes_len perform add_neighbor end-if
+
+  *> Left
+  compute neighbor_ptr = current_ptr - 1
+  *> Subtraction in mod(a - 1, b) because 0 vs 1 indexed collection.
+  compute neighbor_rowpos = function mod(neighbor_ptr - 1, nodes_per_row)
+  compute current_rowpos = function mod(current_ptr - 1, nodes_per_row)
+  *> display "LEFT" neighbor_rowpos ": " nodes_row(neighbor_rowpos)
+  *> display "LEFT" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_rowpos < current_rowpos and neighbor_rowpos >= 0 perform add_neighbor end-if
+
+  *> Right
+  compute neighbor_ptr = current_ptr + 1
+  *> Subtraction in mod(a - 1, b) because 0 vs 1 indexed collection.
+  compute neighbor_rowpos = function mod(neighbor_ptr - 1, nodes_per_row)
+  compute current_rowpos = function mod(current_ptr - 1, nodes_per_row)
+  *> display "RIGHT" neighbor_rowpos ": " nodes_row(neighbor_rowpos)
+  *> display "RIGHT" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_rowpos > current_rowpos perform add_neighbor end-if
+  .
+
+add_neighbor.
+  if nodes_row(neighbor_ptr) - nodes_row(current_ptr) <= 1
+    add 1 to curr_neighbors_num
+    move neighbor_ptr to curr_neighbor_ptr(curr_neighbors_num)
+    move 1 to curr_neighbor_dist(curr_neighbors_num)
+  end-if
+  .
+
 *> Compute the heuristic values for a-star.
 *> entry "heuristic"
+  *> Worthless heuristic -- should be using something like Manhatttan distance at least!
   *> compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
   *> *> display "HEURISTIC!" curr_neighbor nodes_row(curr_neighbor) heuristic_return
   *> goback returning heuristic_return.

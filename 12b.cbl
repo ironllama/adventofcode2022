@@ -26,33 +26,45 @@ data division.
 
     01 all_as.
       02 as_table_len pic s9(4) comp value 0.
-      02 as_table pic s9(8) comp occurs 0 to 99999 times
+      02 as_table usage is index occurs 0 to 99999 times
           depending on as_table_len indexed by as_table_idx.
-    77 lowest_as pic s9(8) comp.
+    77 lowest_as usage is index.
 
     01 shortest_path.
       02 shortest_path_len pic s9(8) comp value 0.
-      02 shortest_path_val pic s9(8) comp value 0 occurs 0 to 99999 times
+      02 shortest_path_val usage is index occurs 0 to 99999 times
           depending on shortest_path_len indexed by shortest_path_idx.
 
     01 total pic s9(8) comp value 0.
 
-    *> For lib-astar/dijkstra
-    01 startPt pic s9(8) comp.
-    01 goalPt pic s9(8) comp.
+
     01 nodes.
-      02 nodes_len pic s9(8) comp value 0.
+    *>   02 nodes_len pic s9(8) comp value 0.
       02 nodes_per_row pic s9(4) comp.
       02 nodes_row pic s9(4) comp value 0 occurs 0 to 99999 times
           depending on nodes_len indexed by nodes_idx.
-    *> 01 heuristic procedure-pointer.
-    *> 01 curr_neighbor pic s9(8) comp.
-    *> 01 current pic s9(8) comp.
-    *> 01 check_original procedure-pointer.
+
+    01 neighbor_ptr usage is index.
+    01 current_rowpos usage is index.
+    01 neighbor_rowpos usage is index.
+
+    *> For lib-astar/dijkstra
+    01 startPt usage is index.
+    01 goalPt usage is index.
+    01 nodes_len pic s9(8) comp.
+
+    01 get_neighbors procedure-pointer.
+    01 get_neighbors_stuff.
+      02 current_ptr usage is index.
+      02 curr_neighbors_num pic s9 comp.
+      02 curr_neighbors occurs 4 times indexed by curr_neighbors_idx.
+        03 curr_neighbor_ptr usage is index.
+        03 curr_neighbor_dist pic s9.
     01 path.
       02 path_len pic s9(8) comp value 0.
-      02 path_val pic s9(8) comp value 0 occurs 0 to 99999 times
+      02 path_val usage is index value 0 occurs 0 to 99999 times
           depending on path_len indexed by path_idx.
+
 
 procedure division.
   call 'lib-readdata' using function module-id ".dat" rf_all_lines
@@ -71,11 +83,13 @@ procedure division.
       move rf_line_row(rf_line_idx)(row_idx:1) to curr_letter
       if curr_letter = "S"
         move nodes_idx to startPt
+        *> move 0 to nodes_row(nodes_idx)
         move 26 to nodes_row(nodes_idx)
         *> display "START IDX: " nodes_idx
       else
         if curr_letter = "E"
           move nodes_idx to goalPt
+          *> move 26 to nodes_row(nodes_idx)
           move 0 to nodes_row(nodes_idx)
           *> display "END IDX: " nodes_idx
         else
@@ -116,13 +130,17 @@ procedure division.
   *> Run a-star for each 'a' as a goal.
   set as_table_idx to 1
   perform varying as_table_idx from 1 by 1 until as_table_idx > as_table_len
-    *> display "NEW END A: " as_table(as_table_idx)
+    *> display "GOAL: " goalPt " NEW END A: " as_table(as_table_idx)
+
     *> initialize curr_neighbor
     *> initialize current
-    initialize path
     *> set heuristic to entry "heuristic"
     *> call 'lib-astar' using goalPt as_table(as_table_idx) nodes heuristic curr_neighbor current path
-    call 'lib-dijkstra' using goalPt as_table(as_table_idx) nodes path
+
+    initialize path
+    set get_neighbors to entry "get_neighbors"
+    *> call 'lib-dijkstra' using startPt goalPt nodes_len path get_neighbors get_neighbors_stuff
+    call 'lib-dijkstra' using goalPt as_table(as_table_idx) nodes_len path get_neighbors get_neighbors_stuff
 
     *> display "FINISHED: " path_len
     *> See if this path is the shortest path.
@@ -148,8 +166,50 @@ procedure division.
   goback.
 
 
+
+entry "get_neighbors"
+  set curr_neighbors_num to 0
+  *> Up
+  compute neighbor_ptr = current_ptr - nodes_per_row
+  *> display "UP" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_ptr > 0 perform add_neighbor end-if
+
+  *> Down
+  compute neighbor_ptr = current_ptr + nodes_per_row
+  *> display "DOWN" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_ptr <= nodes_len perform add_neighbor end-if
+
+  *> Left
+  compute neighbor_ptr = current_ptr - 1
+  *> Subtraction in mod(a - 1, b) because 0 vs 1 indexed collection.
+  compute neighbor_rowpos = function mod(neighbor_ptr - 1, nodes_per_row)
+  compute current_rowpos = function mod(current_ptr - 1, nodes_per_row)
+  *> display "LEFT" neighbor_rowpos ": " nodes_row(neighbor_rowpos)
+  *> display "LEFT" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_rowpos < current_rowpos and neighbor_rowpos >= 0 perform add_neighbor end-if
+
+  *> Right
+  compute neighbor_ptr = current_ptr + 1
+  *> Subtraction in mod(a - 1, b) because 0 vs 1 indexed collection.
+  compute neighbor_rowpos = function mod(neighbor_ptr - 1, nodes_per_row)
+  compute current_rowpos = function mod(current_ptr - 1, nodes_per_row)
+  *> display "RIGHT" neighbor_rowpos ": " nodes_row(neighbor_rowpos)
+  *> display "RIGHT" neighbor_ptr ": " nodes_row(neighbor_ptr)
+  if neighbor_rowpos > current_rowpos perform add_neighbor end-if
+  .
+
+add_neighbor.
+  if nodes_row(neighbor_ptr) - nodes_row(current_ptr) <= 1
+    add 1 to curr_neighbors_num
+    move neighbor_ptr to curr_neighbor_ptr(curr_neighbors_num)
+    move 1 to curr_neighbor_dist(curr_neighbors_num)
+  end-if
+  .
+
+
 *> Compute the heuristic values for a-star.
 *> entry "heuristic"
+*> Worthless heuristic -- should be using something like Manhatttan distance at least!
 *> *>   move nodes_row(curr_neighbor) to heuristic_return
 *>   compute heuristic_return = nodes_row(curr_neighbor) - nodes_row(current)
 *> *>   compute heuristic_return = nodes_row(current) - nodes_row(curr_neighbor)
