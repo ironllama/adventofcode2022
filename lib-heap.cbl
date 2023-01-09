@@ -1,6 +1,7 @@
            >>source format free
 identification division.
 program-id. lib-heap is initial.
+author. alexoh@wcoding.
 *> Adapted from https://www.digitalocean.com/community/tutorials/min-heap-binary-tree
 
 data division.

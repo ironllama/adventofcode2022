@@ -1,6 +1,7 @@
            >>source format free
 identification division.
 program-id. lib-rotatetable.
+author. alexoh@wcoding.
 
 data division.
   working-storage section.

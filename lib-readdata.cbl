@@ -1,6 +1,7 @@
            >>source format free
 identification division.
 program-id. lib-readdata.
+author. alexoh@wcoding.
 
 environment division.
   input-output section.

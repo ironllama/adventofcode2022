@@ -1,6 +1,7 @@
            >> source format free
 identification division.
 program-id. lib-heapsort is initial.
+author. alexoh@wcoding.
 
 data division.
   local-storage section.

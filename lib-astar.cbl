@@ -2,6 +2,7 @@
 identification division.
 program-id. lib-astar is initial.
 *> The 'is initial' sets everything back to initial state per call.
+author. alexoh@wcoding.
 
 data division.
   *> local-storage should also get reset per call, but doesn't seem to work?

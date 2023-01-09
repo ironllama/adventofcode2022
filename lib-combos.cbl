@@ -1,6 +1,7 @@
            >>source format free
 identification division.
 program-id. combos.
+author. alexoh@wcoding.
 
 data division.
   working-storage section.
@@ -10,7 +11,7 @@ data division.
       02 input_tbl_len pic s9(8).
       02 input_tbl pic s9(8) occurs 0 to unbounded
           depending on input_tbl_len indexed by input_tbl_idx.
-    
+
     01 output_tbl_stuff.
       02 output_tbl_len pic s9(8).
       02 output_tbl occurs 0 to unbounded
@@ -21,7 +22,7 @@ data division.
         03 output_combo pic s9(8) occurs 99 times.
 
 procedure division.
-  display function factorial(4) 
+  display function factorial(4)
 
   goback.
 
