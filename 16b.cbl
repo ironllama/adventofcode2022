@@ -21,9 +21,9 @@ data division.
           04 valve_neighbor_name pic x(2).
           04 valve_neighbor_ptr usage is index.
 
-    01 distances.
+    01 distances_stuff.
       02 distance_num pic 9(8) comp.  *> Larger size for lib-dikjstra.
-      02 distances occurs 99 times indexed by active_valves_idx.
+      02 distances occurs 99 times indexed by distances_idx.
         03 distance_from usage is index.
         03 distance_to_num pic 9(2) comp.
         03 distance_to_targets occurs 99 times indexed by distance_to_idx.
@@ -41,19 +41,19 @@ data division.
     01 temp_ptr usage is index.
 
     01 stack_checkout_options.
-    02 stack_minute pic 9(2) comp.
-    02 stack_num pic 9(4) comp.
-    02 stack occurs 99 times.
-      03 check_minute pic 9(2) comp.
-      03 check_idx usage is index.
-      03 check_score pic 9(8) comp.
-      03 check_proj_score pic 9(8) comp.
-      03 valves_visited_num pic 9(8) comp.
-      03 valves_visited occurs 99 times indexed by valves_visited_idx.
-        04 valves_visited_ptr usage is index.
-        04 valves_visited_time pic 9(2) comp.
-      03 valves_amt_venting pic 9(8) comp.
-      *> 03 time_since_valve_on pic 9(2) comp.
+      02 stack_minute pic 9(2) comp.
+      02 stack_num pic 9(4) comp.
+      02 stack occurs 99 times.
+        03 check_minute pic 9(2) comp.
+        03 check_idx usage is index.
+        03 check_score pic 9(8) comp.
+        03 check_proj_score pic 9(8) comp.
+        03 valves_visited_num pic 9(8) comp.
+        03 valves_visited occurs 99 times indexed by valves_visited_idx.
+          04 valves_visited_ptr usage is index.
+          04 valves_visited_time pic 9(2) comp.
+        03 valves_amt_venting pic 9(8) comp.
+        *> 03 time_since_valve_on pic 9(2) comp.
 
     *> Convenience for pulling one item off the above stack.
     01 curr_valve.
@@ -93,35 +93,88 @@ data division.
     77 best_minute pic 9(2) comp.
     77 best_score pic 9(8) comp.
 
+    *> For lib-permutations.
+    01 inputs.
+      02 input_cnt pic s9(8) comp.  *> Must be provided. Num of possible items.
+      02 input_head usage is index value 1. *> Internal use during recursion.
+
+    01 permutations_stuff.
+      02 permutations occurs 2 times indexed by permutations_idx.
+        03 perm_len pic s9(8) comp.  *> Must be provided. Num of items per permutation.
+        03 perm_list_cnt pic s9(8) comp.
+        03 perm_list occurs 99999 times  *> Corruption on copying unboundeds to working/local storage.
+            indexed by perm_list_idx.
+          04 perm_cnt pic s9(8) comp.
+          04 perm usage is index occurs 99 times
+            indexed by perm_idx.
+
+    77 your_paths_idx usage is index.
+    77 your_perm_idx usage is index.
+    77 your_path_score pic s9(8) comp.
+    77 your_remainder pic 9 comp.
+    77 elephant_paths_idx usage is index.
+    77 elephant_perm_idx usage is index.
+    77 elephant_path_score pic s9(8) comp.
+    77 best_combo_score pic s9(8) comp.
+
+    77 get_split_idx usage is index.
+    77 get_split_inner_idx usage is index.
+    77 get_split_who_idx usage is index.
+    77 get_split_path_idx usage is index.
+    77 get_split_perm_idx usage is index.
+
+    01 same_perm_found_ind pic x value 'N'.
+      88 same_perm_found value 'Y'.
+      88 same_perm_not_found value 'N'.
+
+    01 split_distances_stuff.
+      02 split_distance_num pic 9(8) comp.  *> Larger size for lib-dikjstra.
+      02 split_distances occurs 99 times indexed by split_distances_idx.
+        03 split_distance_from usage is index.
+        03 split_distance_to_num pic 9(2) comp.
+        03 split_distance_to_targets occurs 99 times indexed by split_distance_to_idx.
+          04 split_distance_to usage is index.
+          04 split_distance_amt pic 9(2) comp.
+
 
 procedure division.
   call 'lib-readdata' using function module-id ".dat" rf_all_lines
 *>   call 'lib-readdata' using function module-id ".da1" rf_all_lines
 
-  move 0 to valves_num
+  *> move 0 to valves_num
+  add 1 to valves_num *> Reserve the top of the list for AA.
+  add 1 to distance_num *> Reserve the top of the list for AA.
 
-  move rf_cnt to valves_num
   perform varying rf_idx from 1 by 1 until rf_idx > rf_cnt
     *> display "LINE: " function trim(rf_row(rf_idx))
 
-    *> Get name of valve.
-    move rf_row(rf_idx)(7:2) to valve_name(rf_idx)
+    *> Note index if this is the starting valve. Place at the top of the list.
+    if rf_row(rf_idx)(7:2) = "AA"
+      move 1 to valves_num
+      move valves_num to starting_valve
 
-    *> Note index if this is the starting valve.
-    if valve_name(rf_idx) = "AA" move rf_idx to starting_valve end-if
+      move valves_num to distance_from(1)
+      *> subtract 1 from valves_num
+    else
+      add 1 to valves_num
+    end-if
+
+    *> Get name of valve.
+    move rf_row(rf_idx)(7:2) to valve_name(valves_num)
 
     *> Get flowrate of valve.
     move rf_row(rf_idx)(24:2) to temp_flowrate
     if temp_flowrate(2:) = ";"
-      move temp_flowrate(1:1) to valve_flowrate(rf_idx)
+      move temp_flowrate(1:1) to valve_flowrate(valves_num)
     else
-      move temp_flowrate to valve_flowrate(rf_idx)
+      move temp_flowrate to valve_flowrate(valves_num)
     end-if
 
     *> *> Keep track of all valves with positive flowrates, including the starting point AA.
-    if valve_flowrate(rf_idx) > 0 or valve_name(rf_idx) = "AA"
+    if valve_flowrate(valves_num) > 0
+        *> or valve_name(valves_num) = "AA"
       add 1 to distance_num
-      move rf_idx to distance_from(distance_num)
+      move valves_num to distance_from(distance_num)
     end-if
 
     *> Get all the neighbors of the valve.
@@ -141,20 +194,25 @@ procedure division.
             if temp_ptr > length of function trim(temp_neighbors)
               move 1 to temp_done
             end-if
-            add 1 to valve_neighbors_num(rf_idx)
-            move temp_neighbor to valve_neighbor_name(rf_idx valve_neighbors_num(rf_idx))
+            add 1 to valve_neighbors_num(valves_num)
+            move temp_neighbor to valve_neighbor_name(valves_num valve_neighbors_num(valves_num))
         end-unstring
       end-perform
     else
-      add 1 to valve_neighbors_num(rf_idx)
-      move function trim(temp_neighbors) to valve_neighbor_name(rf_idx valve_neighbors_num(rf_idx))
+      add 1 to valve_neighbors_num(valves_num)
+      move function trim(temp_neighbors) to valve_neighbor_name(valves_num valve_neighbors_num(valves_num))
+    end-if
+
+    *> If we put AA at the top, make sure lines thereafter keep processing properly.
+    if rf_row(rf_idx)(7:2) = "AA"
+      compute valves_num = rf_idx
     end-if
 
     *> Display the processed lines.
-    *> display "NEW: " valve_name(rf_idx) " " valve_flowrate(rf_idx) " NEIGHBORS: " no advancing
-    *> perform varying valve_neighbors_idx from 1 by 1 until valve_neighbors_idx > valve_neighbors_num(rf_idx)
-    *>   display valve_neighbor_name(rf_idx valve_neighbors_idx) no advancing
-    *>   if valve_neighbors_idx < valve_neighbors_num(rf_idx) display ", " no advancing end-if
+    *> display "NEW: " valve_name(valves_num) " " valve_flowrate(valves_num) " NEIGHBORS: " no advancing
+    *> perform varying valve_neighbors_idx from 1 by 1 until valve_neighbors_idx > valve_neighbors_num(valves_num)
+    *>   display valve_neighbor_name(valves_num valve_neighbors_idx) no advancing
+    *>   if valve_neighbors_idx < valve_neighbors_num(valves_num) display ", " no advancing end-if
     *> end-perform
     *> display space
   end-perform
@@ -180,20 +238,20 @@ procedure division.
 
   *> display "NUM ACTIVE VALVES: " distance_num
   *> Get all the shortest distances as a table, using Dijkstra!
-  perform varying active_valves_idx from 1 by 1 until active_valves_idx > distance_num
+  perform varying distances_idx from 1 by 1 until distances_idx > distance_num
     perform varying curr_active_valves_idx from 1 by 1 until curr_active_valves_idx > distance_num
-      if active_valves_idx <> curr_active_valves_idx
+      if distances_idx <> curr_active_valves_idx
           and valve_name(distance_from(curr_active_valves_idx)) <> 'AA'  *> Skip 'AA' as a neighbor.
         initialize path
         set get_neighbors to entry "get_neighbors"
-        *> call 'lib-dijkstra' using active_valves_idx curr_active_valves_idx distance_num path get_neighbors get_neighbors_stuff
-        call 'lib-dijkstra' using distance_from(active_valves_idx) distance_from(curr_active_valves_idx) valves_num path get_neighbors get_neighbors_stuff
+        *> call 'lib-dijkstra' using distances_idx curr_active_valves_idx distance_num path get_neighbors get_neighbors_stuff
+        call 'lib-dijkstra' using distance_from(distances_idx) distance_from(curr_active_valves_idx) valves_num path get_neighbors get_neighbors_stuff
 
-        add 1 to distance_to_num(active_valves_idx)
-        move distance_from(curr_active_valves_idx) to distance_to(active_valves_idx distance_to_num(active_valves_idx))
-        move path_len to distance_amt(active_valves_idx distance_to_num(active_valves_idx))
+        add 1 to distance_to_num(distances_idx)
+        move distance_from(curr_active_valves_idx) to distance_to(distances_idx distance_to_num(distances_idx))
+        move path_len to distance_amt(distances_idx distance_to_num(distances_idx))
 
-        *> display "DISTANCE: " valve_name(distance_from(active_valves_idx)) " to " valve_name(distance_from(curr_active_valves_idx)) ": " path_len " " no advancing
+        *> display "DISTANCE: " valve_name(distance_from(distances_idx)) " to " valve_name(distance_from(curr_active_valves_idx)) ": " path_len " " no advancing
         *> perform varying path_idx from 1 by 1 until path_idx > path_len
         *>   display valve_name(path_val(path_idx)) " -> " no advancing
         *> end-perform
@@ -203,19 +261,154 @@ procedure division.
   end-perform
 
 
-  add 1 to stack_num
-  move starting_valve to check_idx(stack_num)
-  move 30 to check_minute(stack_num)
+  *> NOTE: Unfortunately, test has an even number of input items and data have odd. GGAAAAAHHHH.
+  compute input_cnt = distance_num - 1  *> Do not include 'AA'
+  compute your_remainder = function mod(input_cnt 2)
 
-  perform checkout_options until stack_num < 1
+  *> Give myself the larger num of perms if input_cnt is odd. Because how fast are elephants in a cave?!
+  compute perm_len(1) = (input_cnt / 2) + your_remainder
+  *> display "CALLING: " input_cnt perm_len(1)
+  call 'lib-permutations' using inputs permutations(1)
 
-  display "BEST: " best_score
+  compute perm_len(2) = (input_cnt / 2)
+  move 1 to input_head
+  *> display "CALLING: " input_cnt perm_len(2)
+  call 'lib-permutations' using inputs permutations(2)
+
+  *> display "ALL PERMS: "
+  *> perform varying permutations_idx from 1 by 1 until permutations_idx > 2
+  *>   display "PERMS: [" perm_list_cnt(permutations_idx) "]"
+  *>   perform varying perm_list_idx from 1 by 1 until perm_list_idx > perm_list_cnt(permutations_idx)
+  *>     display "[ " no advancing
+  *>     perform varying perm_idx from 1 by 1 until perm_idx > perm_cnt(permutations_idx perm_list_idx)
+  *>       display valve_name(distance_from(perm(permutations_idx perm_list_idx perm_idx) + 1)) no advancing
+  *>       if perm_idx < perm_cnt(permutations_idx perm_list_idx) display ", " no advancing end-if
+  *>     end-perform
+  *>     display " ]"
+  *>   end-perform
+  *> end-perform
+
+  *> Compare every one of your possible paths with every one of the elephant's possible paths.
+  *> Note that this assumes that AA is at the top of the split_distance lists!
+  perform varying your_paths_idx from 1 by 1 until your_paths_idx > perm_list_cnt(1)
+    *> Start by processing one of your path possibilities and getting the best score for that path.
+    *> Create a filtered list of split_distances that only include the valves for this path.
+    initialize split_distances_stuff
+    move your_paths_idx to get_split_path_idx
+    move 1 to get_split_who_idx
+    set get_split_idx to starting_valve  *> Add the 'AA' (starting point) distances.
+    perform get_split_distances_for_idx
+
+    perform varying get_split_perm_idx from 1 by 1 until get_split_perm_idx > perm_cnt(1 your_paths_idx)
+      compute get_split_idx = perm(1 your_paths_idx get_split_perm_idx) + 1  *> Since we skipped 'AA'
+      perform get_split_distances_for_idx
+    end-perform
+    *> display "SPLITS: "
+    *> perform varying split_distances_idx from 1 by 1 until split_distances_idx > split_distance_num
+    *>   perform varying split_distance_to_idx from 1 by 1 until split_distance_to_idx > split_distance_to_num(split_distances_idx)
+    *>     display valve_name(split_distance_from(split_distances_idx))
+    *>         " -> " valve_name(split_distance_to(split_distances_idx split_distance_to_idx))
+    *>         " [" split_distance_amt(split_distances_idx split_distance_to_idx)
+    *>         "]"
+    *>   end-perform
+    *> end-perform
+
+    *> Then, get the score for this path.
+    perform find_best_score
+    move best_score to your_path_score
+
+    perform varying elephant_paths_idx from 1 by 1 until elephant_paths_idx > perm_list_cnt(2)
+      *> Compare your path against the elephant's path.
+
+      *> Skip any paths that have the same valve between the two (don't visit the same valves).
+      set same_perm_not_found to true
+      perform varying your_perm_idx from 1 by 1 until your_perm_idx > perm_cnt(1 your_paths_idx) or same_perm_found
+        perform varying elephant_perm_idx from 1 by 1 until elephant_perm_idx > perm_cnt(2 elephant_paths_idx) or same_perm_found
+          if perm(1 your_paths_idx your_perm_idx) = perm(2 elephant_paths_idx elephant_perm_idx)
+            set same_perm_found to true
+            *> display "SKIP"
+          end-if
+        end-perform
+      end-perform
+
+      if same_perm_not_found
+        *> Create a filtered list of split_distances that only include the valves for this path.
+        initialize split_distances_stuff
+        move elephant_paths_idx to get_split_path_idx
+        move 2 to get_split_who_idx
+        set get_split_idx to starting_valve  *> Add the 'AA' (starting point) distances.
+        perform get_split_distances_for_idx
+
+        perform varying get_split_perm_idx from 1 by 1 until get_split_perm_idx > perm_cnt(2 elephant_paths_idx)
+          compute get_split_idx = perm(2 elephant_paths_idx get_split_perm_idx) + 1  *> Since we skipped 'AA'
+          perform get_split_distances_for_idx
+        end-perform
+
+        *> Then, get the score for this path.
+        perform find_best_score
+        move best_score to elephant_path_score
+
+        compute best_combo_score = function max(best_combo_score, elephant_path_score + your_path_score)
+      end-if
+    end-perform
+  end-perform
+
+  display "BEST COMBO: " best_combo_score
+
+*>   1310 L
 
   goback.
 
 
-checkout_options.
+get_split_distances_for_idx.
+  add 1 to split_distance_num
+  set split_distance_from(split_distance_num) to distance_from(get_split_idx)
+  *> display "GET NEIGHBORS FOR: " valve_name(distance_from(get_split_idx))
 
+  *> Only add distance targets that exist in the original path list.
+  *> perform varying get_split_inner_idx from 1 by 1 until get_split_inner_idx > perm_cnt(your_paths_idx)
+  *> Using perm_len instead of perm_cnt(your_paths_idx) since all the paths should be the same length.
+  perform varying get_split_inner_idx from 1 by 1 until get_split_inner_idx > perm_len(get_split_who_idx)
+    *> display "INNER: " valve_name(distance_from(perm(your_paths_idx get_split_inner_idx)))
+    if get_split_perm_idx = get_split_inner_idx
+      set same_perm_found to true
+    else
+      set same_perm_not_found to true
+    end-if
+
+    perform varying distance_to_idx from 1 by 1 until distance_to_idx > distance_to_num(get_split_idx) or same_perm_found
+      *> display "COMPARING: DIST:" valve_name(distance_to(get_split_idx distance_to_idx)) " vs PERM:" valve_name(distance_from(perm(your_paths_idx get_split_inner_idx)))
+      if distance_to(get_split_idx distance_to_idx) = distance_from(perm(get_split_who_idx get_split_path_idx get_split_inner_idx) + 1)  *> +1 since we skipped 'AA'
+        add 1 to split_distance_to_num(split_distance_num)
+        move distance_to(get_split_idx distance_to_idx) to split_distance_to(split_distance_num split_distance_to_num(split_distance_num))
+        move distance_amt(get_split_idx distance_to_idx) to split_distance_amt(split_distance_num split_distance_to_num(split_distance_num))
+        set same_perm_found to true
+
+        *> display "SPLIT: " valve_name(distance_from(get_split_idx))
+        *>   " to " valve_name(distance_to(get_split_idx distance_to_idx))
+        *>   ": " distance_amt(get_split_idx distance_to_idx)
+      end-if
+    end-perform
+    if same_perm_not_found display "SPLIT: NOT FOUND: " valve_name(distance_from(get_split_idx)) end-if
+  end-perform
+  .
+
+*> From part 1.
+find_best_score.
+  initialize stack_checkout_options
+  initialize curr_valve
+  move 0 to best_score
+  move 0 to best_minute
+
+  set stack_num to 1
+  move starting_valve to check_idx(stack_num)
+  move 26 to check_minute(stack_num)
+
+  perform checkout_options until stack_num < 1
+  *> display "BEST: " best_score
+  .
+
+checkout_options.
   move stack(stack_num) to curr_valve
   subtract 1 from stack_num
 
@@ -267,22 +460,22 @@ checkout_options.
     if add_to_stack
       perform get_distance_from_idx
       if curr_active_valves_idx > 0
-        *> display "GET DISTANCE: " valve_name(distance_from(curr_active_valves_idx)) " NEIGHBORS: " distance_to_num(curr_active_valves_idx)
-        perform varying distance_to_idx from 1 by 1 until distance_to_idx > distance_to_num(curr_active_valves_idx)
-              *> or curr_valves_visited_num = distance_num
-          move distance_to(curr_active_valves_idx distance_to_idx) to check_if_valve_on_ptr
+        *> display "GET split_distANCE: " valve_name(distance_from(curr_active_valves_idx)) " NEIGHBORS: " split_distance_to_num(curr_active_valves_idx)
+        perform varying split_distance_to_idx from 1 by 1 until split_distance_to_idx > split_distance_to_num(curr_active_valves_idx)
+              *> or curr_valves_visited_num = split_distance_num
+          move split_distance_to(curr_active_valves_idx split_distance_to_idx) to check_if_valve_on_ptr
           perform check_if_valve_on
 
           if check_valve_off
-              and distance_to(curr_active_valves_idx distance_to_idx) <> starting_valve  *> Skip 'AA'
-              and distance_amt(curr_active_valves_idx distance_to_idx) < curr_minute
+              and split_distance_to(curr_active_valves_idx split_distance_to_idx) <> starting_valve  *> Skip 'AA'
+              and split_distance_amt(curr_active_valves_idx split_distance_to_idx) < curr_minute
             add 1 to stack_num on size error display ">>>>> STACK OVERFLOW! <<<<<" end-add
             move curr_valve to stack(stack_num)
 
-            move distance_to(curr_active_valves_idx distance_to_idx) to check_idx(stack_num)
-            compute check_minute(stack_num) = curr_minute - distance_amt(curr_active_valves_idx distance_to_idx)
-            compute check_score(stack_num) = curr_score + (curr_valves_amt_venting * distance_amt(curr_active_valves_idx distance_to_idx))
-            *> add distance_amt(curr_active_valves_idx distance_to_idx) to time_since_valve_on(stack_num)
+            move split_distance_to(curr_active_valves_idx split_distance_to_idx) to check_idx(stack_num)
+            compute check_minute(stack_num) = curr_minute - split_distance_amt(curr_active_valves_idx split_distance_to_idx)
+            compute check_score(stack_num) = curr_score + (curr_valves_amt_venting * split_distance_amt(curr_active_valves_idx split_distance_to_idx))
+            *> add split_distance_amt(curr_active_valves_idx split_distance_to_idx) to time_since_valve_on(stack_num)
 
             compute check_proj_score(stack_num) = check_score(stack_num) + (curr_valves_amt_venting * (check_minute(stack_num) - 1))
 
@@ -295,7 +488,6 @@ checkout_options.
 
   end-if
   .
-
 
 get_idx_for_name.
   move 0 to temp_done
@@ -320,10 +512,10 @@ check_if_valve_on.
 
 get_distance_from_idx.
   set curr_active_valves_idx to 0
-  perform varying active_valves_idx from 1 by 1
-      until active_valves_idx > distance_num or curr_active_valves_idx > 0
-    if distance_from(active_valves_idx) = curr_idx
-      set curr_active_valves_idx to active_valves_idx
+  perform varying distances_idx from 1 by 1
+      until distances_idx > split_distance_num or curr_active_valves_idx > 0
+    if split_distance_from(distances_idx) = curr_idx
+      set curr_active_valves_idx to distances_idx
     end-if
   end-perform
   .

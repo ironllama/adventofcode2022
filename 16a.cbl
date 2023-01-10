@@ -41,19 +41,19 @@ data division.
     01 temp_ptr usage is index.
 
     01 stack_checkout_options.
-    02 stack_minute pic 9(2) comp.
-    02 stack_num pic 9(4) comp.
-    02 stack occurs 99 times.
-      03 check_minute pic 9(2) comp.
-      03 check_idx usage is index.
-      03 check_score pic 9(8) comp.
-      03 check_proj_score pic 9(8) comp.
-      03 valves_visited_num pic 9(8) comp.
-      03 valves_visited occurs 99 times indexed by valves_visited_idx.
-        04 valves_visited_ptr usage is index.
-        04 valves_visited_time pic 9(2) comp.
-      03 valves_amt_venting pic 9(8) comp.
-      *> 03 time_since_valve_on pic 9(2) comp.
+      02 stack_minute pic 9(2) comp.
+      02 stack_num pic 9(4) comp.
+      02 stack occurs 99 times.
+        03 check_minute pic 9(2) comp.
+        03 check_idx usage is index.
+        03 check_score pic 9(8) comp.
+        03 check_proj_score pic 9(8) comp.
+        03 valves_visited_num pic 9(8) comp.
+        03 valves_visited occurs 99 times indexed by valves_visited_idx.
+          04 valves_visited_ptr usage is index.
+          04 valves_visited_time pic 9(2) comp.
+        03 valves_amt_venting pic 9(8) comp.
+        *> 03 time_since_valve_on pic 9(2) comp.
 
     *> Convenience for pulling one item off the above stack.
     01 curr_valve.

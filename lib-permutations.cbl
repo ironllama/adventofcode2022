@@ -11,15 +11,15 @@ data division.
     01 local_permutations.
       02 local_perm_len pic s9(8) comp.
       02 local_perm_list_cnt pic s9(8) comp.
-      02 local_perm_list occurs 999 times
+      02 local_perm_list occurs 99999 times
           indexed by local_perm_list_idx.
         03 local_perm_cnt pic s9(8) comp.
-        03 local_perm usage is index occurs 999 times
+        03 local_perm usage is index occurs 99 times
           indexed by local_perm_idx.
 
   linkage section.
     01 inputs.
-      02 input_cnt pic s9(8) comp.
+      02 input_cnt pic s9(8) comp.  *> Must be provided. Num of possible items.
       02 input_head usage is index value 1. *> Internal use during recursion.
       *> 02 input_item pic x(2) occurs 0 to unbounded times
       *> 02 input_item usage is index occurs 0 to unbounded times
@@ -28,11 +28,11 @@ data division.
     01 permutations.
       02 perm_len pic s9(8) comp.  *> Must be provided. Num of items per permutation.
       02 perm_list_cnt pic s9(8) comp.
-      02 perm_list occurs 999 times  *> Corruption on copying unboundeds to working/local storage.
+      02 perm_list occurs 99999 times  *> Corruption on copying unboundeds to working/local storage.
           indexed by perm_list_idx.
         03 perm_cnt pic s9(8) comp.
         *> 03 perm pic x(2) occurs 999 times
-        03 perm usage is index occurs 999 times
+        03 perm usage is index occurs 99 times
           indexed by perm_idx.
 
 
@@ -48,17 +48,17 @@ procedure division using inputs permutations.
       set local_perm_len to perm_len
       subtract 1 from local_perm_len
 
-      *> display "LOCAL INPUTS: [ " no advancing
-      *> perform varying input_idx from curr_loop_idx by 1 until input_idx > input_cnt
-      *>   display input_item(input_idx) no advancing
-      *>   if input_idx < input_cnt display ", " no advancing end-if
-      *> end-perform
-      *> display " ]" perm_cnt(1) local_perm_cnt(1)
+    *>   display "LOCAL INPUTS: [ " no advancing
+    *>   perform varying input_idx from curr_loop_idx by 1 until input_idx > input_cnt
+    *>     display input_item(input_idx) no advancing
+    *>     if input_idx < input_cnt display ", " no advancing end-if
+    *>   end-perform
+    *>   display " ]" perm_cnt(1) local_perm_cnt(1)
 
       *> Put mutated head pointer into payload.
       move curr_input_head to input_head
 
-      call 'lib-anagrams' using inputs local_permutations
+      call 'lib-permutations' using inputs local_permutations
 
       *> display "LOCAL PERMS:  " no advancing
       *> perform varying local_perm_list_idx from 1 by 1 until local_perm_list_idx > local_perm_list_cnt
