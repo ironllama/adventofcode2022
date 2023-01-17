@@ -29,21 +29,21 @@ data division.
     01 neighbor_rowpos usage is index.
 
     *> For lib-astar/dijkstra
-    01 startPt usage is index.
-    01 goalPt usage is index.
-    01 nodes_len pic s9(8) comp.
-
-    01 get_neighbors procedure-pointer.
-    01 get_neighbors_stuff.
-      02 current_ptr usage is index.
-      02 curr_neighbors_num pic s9 comp.
-      02 curr_neighbors occurs 4 times indexed by curr_neighbors_idx.
-        03 curr_neighbor_ptr usage is index.
-        03 curr_neighbor_dist pic s9.
-    01 path.
-      02 path_len pic s9(8) comp value 0.
-      02 path_val usage is index occurs 0 to 99999 times
-          depending on path_len indexed by path_idx.
+    01 dijkstra_stuff.
+      02 startPt usage is index.
+      02 goalPt usage is index.
+      02 nodes_len pic s9(8) comp.
+      02 get_neighbors_stuff.
+        03 get_neighbors procedure-pointer.
+        03 current_ptr usage is index.
+        03 curr_neighbors_num pic s9 comp.
+        03 curr_neighbors occurs 9 times indexed by curr_neighbors_idx.
+          04 curr_neighbor_ptr usage is index.
+          04 curr_neighbor_dist pic s9.
+      02 path.
+        03 path_len pic s9(8) comp value 0.
+        03 path_val usage is index occurs 0 to 99999 times
+            depending on path_len indexed by path_idx.
 
 
 procedure division.
@@ -93,7 +93,7 @@ procedure division.
 *>   call 'lib-astar' using startPt goalPt nodes heuristic curr_neighbor current path
 
   set get_neighbors to entry "get_neighbors"
-  call 'lib-dijkstra' using startPt goalPt nodes_len path get_neighbors get_neighbors_stuff
+  call 'lib-dijkstra' using dijkstra_stuff
 
 *>   *> Show the shortest path values!
 *>   display "path: [" no advancing

@@ -78,17 +78,21 @@ data division.
       88 do_not_add_to_stack value 'N'.
 
     *> For lib-dijkstra.
-    01 get_neighbors procedure-pointer.
-    01 get_neighbors_stuff.
-      02 current_ptr usage is index.
-      02 curr_neighbors_num pic s9 comp.
-      02 curr_neighbors occurs 5 times indexed by curr_neighbors_idx.
-        03 curr_neighbor_ptr usage is index.
-        03 curr_neighbor_dist pic s9.
-    01 path.
-      02 path_len pic s9(8) comp value 0.
-      02 path_val usage is index occurs 0 to 99999 times
-          depending on path_len indexed by path_idx.
+    01 dijkstra_stuff.
+      02 startPt usage is index.
+      02 goalPt usage is index.
+      02 nodes_len pic s9(8) comp.
+      02 get_neighbors_stuff.
+        03 get_neighbors procedure-pointer.
+        03 current_ptr usage is index.
+        03 curr_neighbors_num pic s9 comp.
+        03 curr_neighbors occurs 9 times indexed by curr_neighbors_idx.
+          04 curr_neighbor_ptr usage is index.
+          04 curr_neighbor_dist pic s9.
+      02 path.
+        03 path_len pic s9(8) comp value 0.
+        03 path_val usage is index occurs 0 to 99999 times
+            depending on path_len indexed by path_idx.
 
     77 best_minute pic 9(2) comp.
     77 best_score pic 9(8) comp.
@@ -245,7 +249,11 @@ procedure division.
         initialize path
         set get_neighbors to entry "get_neighbors"
         *> call 'lib-dijkstra' using distances_idx curr_active_valves_idx distance_num path get_neighbors get_neighbors_stuff
-        call 'lib-dijkstra' using distance_from(distances_idx) distance_from(curr_active_valves_idx) valves_num path get_neighbors get_neighbors_stuff
+        *> call 'lib-dijkstra' using distance_from(distances_idx) distance_from(curr_active_valves_idx) valves_num path get_neighbors_stuff
+        move distance_from(distances_idx) to startPt
+        move distance_from(curr_active_valves_idx) to goalPt
+        move valves_num to nodes_len
+        call 'lib-dijkstra' using dijkstra_stuff
 
         add 1 to distance_to_num(distances_idx)
         move distance_from(curr_active_valves_idx) to distance_to(distances_idx distance_to_num(distances_idx))

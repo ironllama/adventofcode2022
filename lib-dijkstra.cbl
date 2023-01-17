@@ -43,30 +43,31 @@ data division.
     77 neighbor_dist pic s9.
 
   linkage section.
-    01 ln-startPt usage is index.
-    01 ln-goalPt usage is index.
-    01 ln-nodes_len pic s9(8) comp.
-    *> 01 ln-nodes.
-    *>   02 ln-nodes_len pic s9(8) comp value 0.
-    *>   02 ln-nodes_per_row pic s9(4) comp.
-    *>   02 ln-nodes_row pic s9(4) comp value 0 occurs 0 to unbounded
-    *>       depending on ln-nodes_len indexed by ln-nodes_idx.
-    01 ln-get_neighbors procedure-pointer.
-    *> 01 ln-current usage is index.
-    01 ln-get_neighbors_stuff.
-      02 ln-current_ptr usage is index.
-      02 ln-curr_neighbors_num pic s9 comp.
-      02 ln-curr_neighbors occurs 0 to unbounded
-          depending on ln-curr_neighbors_num indexed by ln-curr_neighbors_idx.
-        03 ln-curr_neighbor_ptr usage is index.
-        03 ln-curr_neighbor_dist pic s9.
-    01 ln-path.
-      02 ln-path_len pic s9(8) comp value 0.
-      02 ln-path_val usage is index occurs 0 to unbounded
-          depending on ln-path_len indexed by ln-path_idx.
+    01 ln-dijkstra_stuff.
+      02 ln-startPt usage is index.
+      02 ln-goalPt usage is index.
+      02 ln-nodes_len pic s9(8) comp.
+      *> 01 ln-nodes.
+      *>   02 ln-nodes_len pic s9(8) comp value 0.
+      *>   02 ln-nodes_per_row pic s9(4) comp.
+      *>   02 ln-nodes_row pic s9(4) comp value 0 occurs 0 to unbounded
+      *>       depending on ln-nodes_len indexed by ln-nodes_idx.
+      *> 01 ln-current usage is index.
+      02 ln-get_neighbors_stuff.
+        03 ln-get_neighbors procedure-pointer.
+        03 ln-current_ptr usage is index.
+        03 ln-curr_neighbors_num pic s9 comp.
+        03 ln-curr_neighbors occurs 9 times
+            indexed by ln-curr_neighbors_idx.
+          04 ln-curr_neighbor_ptr usage is index.
+          04 ln-curr_neighbor_dist pic s9.
+      02 ln-path.
+        03 ln-path_len pic s9(8) comp value 0.
+        03 ln-path_val usage is index occurs 0 to unbounded
+            depending on ln-path_len indexed by ln-path_idx.
 
 
-procedure division using ln-startPt ln-goalPt ln-nodes_len ln-path ln-get_neighbors ln-get_neighbors_stuff.
+procedure division using ln-dijkstra_stuff.
   *> display "DIJKSTRA!"
   move 'min' to minmax
   move 'insert' to oper
